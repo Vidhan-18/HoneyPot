@@ -1,0 +1,589 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Attacker Tracking - Honeypot Dashboard</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: #1a1a1a;
+            color: #e0e0e0;
+            padding: 20px;
+        }
+        
+        .header {
+            background: #2d2d2d;
+            padding: 20px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.3);
+        }
+        
+        .header h1 {
+            color: #ff6b6b;
+            margin-bottom: 10px;
+        }
+        
+        .back-link {
+            color: #4ecdc4;
+            text-decoration: none;
+            margin-bottom: 10px;
+            display: inline-block;
+        }
+        
+        .back-link:hover {
+            text-decoration: underline;
+        }
+        
+        .attacker-card {
+            background: #2d2d2d;
+            padding: 20px;
+            border-radius: 8px;
+            margin-bottom: 15px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.3);
+            border-left: 4px solid #ff6b6b;
+        }
+        
+        .attacker-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 15px;
+        }
+        
+        .attacker-ip {
+            font-size: 24px;
+            font-weight: bold;
+            color: #ff6b6b;
+            font-family: 'Courier New', monospace;
+        }
+        
+        .location-info {
+            background: #3d3d3d;
+            padding: 15px;
+            border-radius: 8px;
+            margin-bottom: 15px;
+            border-left: 4px solid #4ecdc4;
+        }
+        
+        .location-info h4 {
+            color: #4ecdc4;
+            margin-bottom: 10px;
+        }
+        
+        .location-details {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 10px;
+            color: #aaa;
+            font-size: 14px;
+        }
+        
+        .attack-badges {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+            margin-top: 10px;
+        }
+        
+        .attack-badge {
+            padding: 6px 12px;
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: 600;
+        }
+        
+        .badge-critical {
+            background: #ff4757;
+            color: white;
+        }
+        
+        .badge-high {
+            background: #ff6b6b;
+            color: white;
+        }
+        
+        .badge-medium {
+            background: #ffd93d;
+            color: #1a1a1a;
+        }
+        
+        .badge-low {
+            background: #4ecdc4;
+            color: #1a1a1a;
+        }
+        
+        .severity-indicator {
+            display: inline-block;
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            margin-right: 5px;
+        }
+        
+        .severity-critical { background: #ff4757; }
+        .severity-high { background: #ff6b6b; }
+        .severity-medium { background: #ffd93d; }
+        .severity-low { background: #4ecdc4; }
+        
+        .attacker-stats {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+            gap: 10px;
+            margin-bottom: 15px;
+        }
+        
+        .stat-item {
+            background: #3d3d3d;
+            padding: 10px;
+            border-radius: 4px;
+        }
+        
+        .stat-label {
+            color: #888;
+            font-size: 12px;
+            margin-bottom: 5px;
+        }
+        
+        .stat-value {
+            color: #4ecdc4;
+            font-size: 18px;
+            font-weight: bold;
+        }
+        
+        .sessions-list {
+            margin-top: 15px;
+        }
+        
+        .session-item {
+            background: #3d3d3d;
+            padding: 15px;
+            margin-bottom: 10px;
+            border-radius: 4px;
+            border-left: 4px solid #4ecdc4;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+        
+        .session-item:hover {
+            background: #4d4d4d;
+            transform: translateX(5px);
+        }
+        
+        .session-header {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 10px;
+        }
+        
+        .session-protocol {
+            color: #ffd93d;
+            font-weight: bold;
+        }
+        
+        .session-time {
+            color: #888;
+            font-size: 12px;
+        }
+        
+        .session-details {
+            color: #aaa;
+            font-size: 14px;
+        }
+        
+        .badge {
+            display: inline-block;
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-size: 12px;
+            font-weight: bold;
+            margin-right: 5px;
+        }
+        
+        .badge-ssh {
+            background: #4ecdc4;
+            color: #1a1a1a;
+        }
+        
+        .badge-http {
+            background: #ffd93d;
+            color: #1a1a1a;
+        }
+        
+        .badge-db {
+            background: #ff6b6b;
+            color: white;
+        }
+        
+        .badge-ftp {
+            background: #95e1d3;
+            color: #1a1a1a;
+        }
+        
+        .badge-ioc {
+            background: #ff4757;
+            color: white;
+        }
+        
+        .filter-bar {
+            background: #2d2d2d;
+            padding: 15px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            display: flex;
+            gap: 10px;
+            align-items: center;
+        }
+        
+        .filter-input {
+            background: #3d3d3d;
+            border: 1px solid #4d4d4d;
+            color: #e0e0e0;
+            padding: 10px;
+            border-radius: 4px;
+            flex: 1;
+        }
+        
+        .filter-input:focus {
+            outline: none;
+            border-color: #4ecdc4;
+        }
+        
+        .empty-state {
+            text-align: center;
+            padding: 40px;
+            color: #888;
+        }
+        
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0,0,0,0.8);
+            z-index: 1000;
+            overflow-y: auto;
+        }
+        
+        .modal-content {
+            background: #2d2d2d;
+            margin: 50px auto;
+            padding: 30px;
+            border-radius: 8px;
+            max-width: 800px;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.5);
+        }
+        
+        .modal-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+        }
+        
+        .modal-header h2 {
+            color: #ff6b6b;
+        }
+        
+        .close {
+            color: #888;
+            font-size: 28px;
+            font-weight: bold;
+            cursor: pointer;
+        }
+        
+        .close:hover {
+            color: #fff;
+        }
+        
+        .json-view {
+            background: #1a1a1a;
+            padding: 15px;
+            border-radius: 4px;
+            overflow-x: auto;
+            font-family: 'Courier New', monospace;
+            font-size: 12px;
+            color: #4ecdc4;
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <a href="/" class="back-link">← Back to Dashboard</a>
+        <h1>🎯 Attacker Tracking</h1>
+        <p>View all attackers and their activities by IP address</p>
+    </div>
+    
+    <div class="filter-bar">
+        <input type="text" id="ip-filter" class="filter-input" placeholder="Filter by IP address...">
+        <select id="protocol-filter" class="filter-input" style="flex: 0 0 150px;">
+            <option value="">All Protocols</option>
+            <option value="ssh">SSH</option>
+            <option value="http">HTTP</option>
+            <option value="postgres">PostgreSQL</option>
+            <option value="mysql">MySQL</option>
+            <option value="smb">SMB</option>
+            <option value="ftp">FTP</option>
+        </select>
+    </div>
+    
+    <div id="attackers-container"></div>
+    
+    <div id="modal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2 id="modal-title">Session Details</h2>
+                <span class="close" onclick="closeModal()">&times;</span>
+            </div>
+            <div id="modal-body"></div>
+        </div>
+    </div>
+    
+    <script>
+        let allSessions = [];
+        let attackers = {};
+        
+        async function loadAttackers() {
+            try {
+                // Use new attackers summary API
+                const response = await fetch('/api/attackers-summary');
+                const attackersData = await response.json();
+                
+                // Also get individual sessions for details
+                const sessionsResponse = await fetch('/api/sessions?limit=1000');
+                allSessions = await sessionsResponse.json();
+                
+                // Use attackers summary data
+                attackers = {};
+                attackersData.forEach(attacker => {
+                    attackers[attacker.ip] = attacker;
+                    // Convert attack_categories array back to Set for compatibility
+                    attacker.protocols = new Set();
+                    attacker.totalCommands = 0;
+                    attacker.totalLogins = 0;
+                    attacker.firstSeen = null;
+                    attacker.lastSeen = null;
+                    
+                    // Process sessions
+                    attacker.sessions.forEach(session => {
+                        const fullSession = allSessions.find(s => s.session_id === session.session_id || s.file === session.session_id);
+                        if (fullSession) {
+                            if (fullSession.protocol) {
+                                attacker.protocols.add(fullSession.protocol);
+                            }
+                            if (fullSession.commands) {
+                                attacker.totalCommands += fullSession.commands.length;
+                            }
+                            if (fullSession.login_attempts) {
+                                attacker.totalLogins += fullSession.login_attempts.length;
+                            }
+                            if (!attacker.firstSeen || new Date(fullSession.start_time) < new Date(attacker.firstSeen)) {
+                                attacker.firstSeen = fullSession.start_time;
+                            }
+                            if (!attacker.lastSeen || new Date(fullSession.start_time) > new Date(attacker.lastSeen)) {
+                                attacker.lastSeen = fullSession.start_time;
+                            }
+                        }
+                    });
+                });
+                
+                renderAttackers();
+            } catch (error) {
+                console.error('Error loading attackers:', error);
+            }
+        }
+        
+        function renderAttackers() {
+            const container = document.getElementById('attackers-container');
+            const ipFilter = document.getElementById('ip-filter').value.toLowerCase();
+            const protocolFilter = document.getElementById('protocol-filter').value;
+            
+            const filtered = Object.values(attackers).filter(attacker => {
+                const matchesIP = attacker.ip.toLowerCase().includes(ipFilter);
+                const matchesProtocol = !protocolFilter || Array.from(attacker.protocols).some(p => 
+                    p.toLowerCase().includes(protocolFilter.toLowerCase())
+                );
+                return matchesIP && matchesProtocol;
+            });
+            
+            if (filtered.length === 0) {
+                container.innerHTML = '<div class="empty-state">No attackers found</div>';
+                return;
+            }
+            
+            // Sort by number of sessions (most active first)
+            filtered.sort((a, b) => b.sessions.length - a.sessions.length);
+            
+            container.innerHTML = filtered.map(attacker => {
+                const protocols = Array.from(attacker.protocols);
+                const protocolBadges = protocols.map(p => {
+                    const badgeClass = `badge-${p.toLowerCase().replace('postgresql', 'db').replace('mysql', 'db')}`;
+                    return `<span class="badge ${badgeClass}">${p.toUpperCase()}</span>`;
+                }).join('');
+                
+                const sessionsHtml = attacker.sessions ? attacker.sessions.map(session => {
+                    const protocol = session.protocol || 'Unknown';
+                    const badgeClass = `badge-${protocol.toLowerCase().replace('postgresql', 'db').replace('mysql', 'db')}`;
+                    const attackCount = session.attacks ? session.attacks.length : 0;
+                    const attackBadges = session.attacks ? session.attacks.map(a => 
+                        `<span class="attack-badge badge-${a.severity || 'medium'}" style="font-size: 10px; padding: 4px 8px;">${a.icon || ''} ${a.name || a.category}</span>`
+                    ).join('') : '';
+                    
+                    return `
+                        <div class="session-item" onclick="showSessionDetails('${session.session_id || session.file || ''}')">
+                            <div class="session-header">
+                                <span class="session-protocol">
+                                    <span class="badge ${badgeClass}">${protocol.toUpperCase()}</span>
+                                    ${session.session_id || session.file || 'Session'}
+                                </span>
+                                <span class="session-time">${session.start_time ? new Date(session.start_time).toLocaleString() : 'N/A'}</span>
+                            </div>
+                            <div class="session-details">
+                                ${attackCount > 0 ? `<strong style="color: #ff6b6b;">${attackCount} attack(s) detected</strong><br>` : ''}
+                                ${attackBadges}
+                            </div>
+                        </div>
+                    `;
+                }).join('') : '';
+                
+                // Location info
+                const location = attacker.location || {};
+                const locationHtml = location.country !== 'Unknown' ? `
+                    <div class="location-info">
+                        <h4>📍 Location</h4>
+                        <div class="location-details">
+                            <div><strong>Country:</strong> ${location.country || 'Unknown'} ${location.country_code ? `(${location.country_code})` : ''}</div>
+                            <div><strong>City:</strong> ${location.city || 'Unknown'}</div>
+                            <div><strong>ISP:</strong> ${location.isp || 'Unknown'}</div>
+                            ${location.region ? `<div><strong>Region:</strong> ${location.region}</div>` : ''}
+                        </div>
+                    </div>
+                ` : '';
+                
+                // Attack badges
+                const attackBadgesHtml = attacker.attack_categories && attacker.attack_categories.length > 0
+                    ? attacker.attack_categories.map(cat => {
+                        // Get attack info (simplified - would need full category data)
+                        const severity = cat.includes('sql') || cat.includes('command') || cat.includes('malware') ? 'critical' : 
+                                        cat.includes('brute') || cat.includes('path') || cat.includes('xss') ? 'high' : 'medium';
+                        return `<span class="attack-badge badge-${severity}">${cat.replace('_', ' ').toUpperCase()}</span>`;
+                    }).join('')
+                    : '<span class="attack-badge badge-low">No attacks detected</span>';
+                
+                // Severity indicator
+                const maxSeverity = attacker.severity_counts.critical > 0 ? 'critical' :
+                                   attacker.severity_counts.high > 0 ? 'high' :
+                                   attacker.severity_counts.medium > 0 ? 'medium' : 'low';
+                
+                return `
+                    <div class="attacker-card">
+                        <div class="attacker-header">
+                            <div>
+                                <div class="attacker-ip">
+                                    <span class="severity-indicator severity-${maxSeverity}"></span>
+                                    ${attacker.ip}
+                                </div>
+                                <div style="margin-top: 5px; color: #888; font-size: 14px;">
+                                    ${location.country || 'Unknown Location'}
+                                </div>
+                            </div>
+                            <div>${protocolBadges}</div>
+                        </div>
+                        ${locationHtml}
+                        <div style="margin-bottom: 15px;">
+                            <h4 style="color: #888; margin-bottom: 10px; font-size: 14px;">Attack Types:</h4>
+                            <div class="attack-badges">${attackBadgesHtml}</div>
+                        </div>
+                        <div class="attacker-stats">
+                            <div class="stat-item">
+                                <div class="stat-label">Total Sessions</div>
+                                <div class="stat-value">${attacker.sessions ? attacker.sessions.length : 0}</div>
+                            </div>
+                            <div class="stat-item">
+                                <div class="stat-label">Total Attacks</div>
+                                <div class="stat-value" style="color: ${attacker.total_attacks > 0 ? '#ff6b6b' : '#4ecdc4'}">${attacker.total_attacks || 0}</div>
+                            </div>
+                            <div class="stat-item">
+                                <div class="stat-label">Critical</div>
+                                <div class="stat-value" style="color: #ff4757">${attacker.severity_counts ? attacker.severity_counts.critical : 0}</div>
+                            </div>
+                            <div class="stat-item">
+                                <div class="stat-label">High</div>
+                                <div class="stat-value" style="color: #ff6b6b">${attacker.severity_counts ? attacker.severity_counts.high : 0}</div>
+                            </div>
+                            <div class="stat-item">
+                                <div class="stat-label">Commands</div>
+                                <div class="stat-value">${attacker.totalCommands || 0}</div>
+                            </div>
+                            <div class="stat-item">
+                                <div class="stat-label">Login Attempts</div>
+                                <div class="stat-value">${attacker.totalLogins || 0}</div>
+                            </div>
+                            <div class="stat-item">
+                                <div class="stat-label">First Seen</div>
+                                <div class="stat-value" style="font-size: 12px;">${attacker.firstSeen ? new Date(attacker.firstSeen).toLocaleString() : 'N/A'}</div>
+                            </div>
+                            <div class="stat-item">
+                                <div class="stat-label">Last Seen</div>
+                                <div class="stat-value" style="font-size: 12px;">${attacker.lastSeen ? new Date(attacker.lastSeen).toLocaleString() : 'N/A'}</div>
+                            </div>
+                        </div>
+                        <div class="sessions-list">
+                            <h4 style="margin-bottom: 10px; color: #888;">Sessions (${attacker.sessions ? attacker.sessions.length : 0}):</h4>
+                            ${sessionsHtml || '<p style="color: #888; padding: 10px;">No sessions available</p>'}
+                        </div>
+                    </div>
+                `;
+            }).join('');
+        }
+        
+        async function showSessionDetails(sessionId) {
+            try {
+                const response = await fetch(`/api/session/${sessionId}`);
+                const details = await response.json();
+                showModal('Session Details', JSON.stringify(details, null, 2));
+            } catch (error) {
+                console.error('Error loading session:', error);
+            }
+        }
+        
+        function showModal(title, content) {
+            document.getElementById('modal-title').textContent = title;
+            document.getElementById('modal-body').innerHTML = `<div class="json-view">${content}</div>`;
+            document.getElementById('modal').style.display = 'block';
+        }
+        
+        function closeModal() {
+            document.getElementById('modal').style.display = 'none';
+        }
+        
+        // Filter handlers
+        document.getElementById('ip-filter').addEventListener('input', renderAttackers);
+        document.getElementById('protocol-filter').addEventListener('change', renderAttackers);
+        
+        // Close modal on outside click
+        window.onclick = function(event) {
+            const modal = document.getElementById('modal');
+            if (event.target == modal) {
+                closeModal();
+            }
+        }
+        
+        // Initial load
+        loadAttackers();
+        
+        // Auto-refresh every 30 seconds
+        setInterval(loadAttackers, 30000);
+    </script>
+</body>
+</html>
+

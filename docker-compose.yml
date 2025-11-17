@@ -1,0 +1,175 @@
+version: '3.8'
+
+services:
+  # SSH Honeypot
+  ssh-honeypot:
+    build:
+      context: ./services/ssh
+      dockerfile: Dockerfile
+    container_name: ssh-honeypot
+    networks:
+      - honeypot-network
+    ports:
+      - "2222:2222"
+    volumes:
+      - ./data/ssh:/var/log/honeypot
+      - ./data/sessions:/sessions
+    environment:
+      - SSH_PORT=2222
+      - LOG_LEVEL=INFO
+    restart: unless-stopped
+    cap_add:
+      - NET_ADMIN
+      - NET_RAW
+
+  # HTTP Honeypot
+  http-honeypot:
+    build:
+      context: ./services/http
+      dockerfile: Dockerfile
+    container_name: http-honeypot
+    networks:
+      - honeypot-network
+    ports:
+      - "8080:8080"
+    volumes:
+      - ./data/http:/var/log/honeypot
+      - ./data/sessions:/sessions
+    environment:
+      - HTTP_PORT=8080
+      - LOG_LEVEL=INFO
+    restart: unless-stopped
+
+  # Database API Honeypot
+  db-api-honeypot:
+    build:
+      context: ./services/db-api
+      dockerfile: Dockerfile
+    container_name: db-api-honeypot
+    networks:
+      - honeypot-network
+    ports:
+      - "5432:5432"
+      - "3306:3306"
+    volumes:
+      - ./data/db:/var/log/honeypot
+      - ./data/sessions:/sessions
+    environment:
+      - POSTGRES_PORT=5432
+      - MYSQL_PORT=3306
+      - LOG_LEVEL=INFO
+    restart: unless-stopped
+
+  # SMB/FTP Honeypot
+  smb-ftp-honeypot:
+    build:
+      context: ./services/smb-ftp
+      dockerfile: Dockerfile
+    container_name: smb-ftp-honeypot
+    networks:
+      - honeypot-network
+    ports:
+      - "445:445"
+      - "21:21"
+      - "139:139"
+    volumes:
+      - ./data/smb-ftp:/var/log/honeypot
+      - ./data/sessions:/sessions
+    environment:
+      - SMB_PORT=445
+      - FTP_PORT=21
+      - LOG_LEVEL=INFO
+    restart: unless-stopped
+
+  # Packet Capture Service
+  packet-capture:
+    build:
+      context: ./monitoring/packet-capture
+      dockerfile: Dockerfile
+    container_name: packet-capture
+    networks:
+      - honeypot-network
+    volumes:
+      - ./data/pcaps:/pcaps
+      - ./data/logs:/logs
+    environment:
+      - INTERFACE=eth0
+      - CAPTURE_SIZE=100M
+    restart: unless-stopped
+    cap_add:
+      - NET_ADMIN
+      - NET_RAW
+    privileged: true
+
+  # Log Aggregator
+  log-aggregator:
+    build:
+      context: ./monitoring/log-aggregator
+      dockerfile: Dockerfile
+    container_name: log-aggregator
+    networks:
+      - honeypot-network
+    volumes:
+      - ./data/logs:/logs
+      - ./data/ssh:/var/log/honeypot/ssh:ro
+      - ./data/http:/var/log/honeypot/http:ro
+      - ./data/db:/var/log/honeypot/db:ro
+      - ./data/smb-ftp:/var/log/honeypot/smb-ftp:ro
+    environment:
+      - LOG_LEVEL=INFO
+    restart: unless-stopped
+
+  # Web Dashboard
+  web-dashboard:
+    build:
+      context: ./monitoring/web-dashboard
+      dockerfile: Dockerfile
+    container_name: web-dashboard
+    networks:
+      - honeypot-network
+    ports:
+      - "5000:5000"
+    volumes:
+      - ./data/logs:/logs:ro
+      - ./data/sessions:/sessions:ro
+      - ./data/iocs:/iocs:ro
+      - ./data/pcaps:/pcaps:ro
+    environment:
+      - DASHBOARD_PORT=5000
+    restart: unless-stopped
+    depends_on:
+      - log-aggregator
+
+  # IOC Detection & Alerting
+  ioc-detector:
+    build:
+      context: ./monitoring/ioc-detector
+      dockerfile: Dockerfile
+    container_name: ioc-detector
+    network_mode: host  # Use host network for alerting (allows controlled egress)
+    volumes:
+      - ./data/logs:/logs:ro
+      - ./data/sessions:/sessions:ro
+      - ./data/iocs:/iocs
+    environment:
+      - WEBHOOK_URL=${WEBHOOK_URL:-}
+      - SLACK_WEBHOOK=${SLACK_WEBHOOK:-}
+      - TELEGRAM_BOT_TOKEN=${TELEGRAM_BOT_TOKEN:-}
+      - TELEGRAM_CHAT_ID=${TELEGRAM_CHAT_ID:-}
+      - ALERT_THRESHOLD=5
+    restart: unless-stopped
+    depends_on:
+      - log-aggregator
+
+networks:
+  honeypot-network:
+    driver: bridge
+    # Note: internal: true prevents ALL external access including DNS
+    # For alerting to work, we use host network for ioc-detector or allow controlled egress
+    # For maximum isolation, set internal: true and use host network for alerts
+    internal: false  # Set to true for complete isolation (alerts won't work)
+
+volumes:
+  honeypot-data:
+    driver: local
+

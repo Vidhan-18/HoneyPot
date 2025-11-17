@@ -1,0 +1,15 @@
+.env
+data/
+*.log
+*.pcap
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.Python
+venv/
+env/
+*.egg-info/
+dist/
+build/
+
