@@ -227,3 +227,5 @@ The attack classification system provides:
 All attacks are automatically classified and displayed with location information for comprehensive threat analysis.
 
 
+
+

@@ -69,7 +69,7 @@ services:
     networks:
       - honeypot-network
     ports:
-      - "445:445"
+      - "1445:445"
       - "21:21"
       - "139:139"
     volumes:

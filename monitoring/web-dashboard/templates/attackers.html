@@ -3,7 +3,8 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Attacker Tracking - Honeypot Dashboard</title>
+    <title>Attacker Tracking - HPD Security Dashboard</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
     <style>
         * {
             margin: 0;
@@ -12,168 +13,224 @@
         }
         
         body {
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            background: #1a1a1a;
-            color: #e0e0e0;
-            padding: 20px;
+            font-family: 'Inter', sans-serif;
+            background: linear-gradient(135deg, #dbeafe, #e9d5ff);
+            padding: 40px;
+            min-height: 100vh;
         }
         
-        .header {
-            background: #2d2d2d;
-            padding: 20px;
-            border-radius: 8px;
-            margin-bottom: 20px;
-            box-shadow: 0 2px 10px rgba(0,0,0,0.3);
+        .dashboard {
+            max-width: 1400px;
+            margin: auto;
+            background: #0f172a;
+            border-radius: 30px;
+            padding: 30px;
+            color: white;
+            box-shadow: 0 40px 80px rgba(0,0,0,0.25);
         }
         
-        .header h1 {
-            color: #ff6b6b;
-            margin-bottom: 10px;
+        .topbar {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 30px;
+            flex-wrap: wrap;
+            gap: 15px;
+        }
+        
+        .logo {
+            font-size: 22px;
+            font-weight: 700;
+            color: #60a5fa;
         }
         
         .back-link {
-            color: #4ecdc4;
+            color: #60a5fa;
             text-decoration: none;
-            margin-bottom: 10px;
-            display: inline-block;
+            font-size: 14px;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            transition: all 0.3s;
         }
         
         .back-link:hover {
-            text-decoration: underline;
+            color: #93c5fd;
+        }
+        
+        .filter-bar {
+            background: #1e293b;
+            padding: 15px 20px;
+            border-radius: 15px;
+            margin-bottom: 20px;
+            display: flex;
+            gap: 15px;
+            align-items: center;
+            flex-wrap: wrap;
+        }
+        
+        .filter-input {
+            background: #0f172a;
+            border: 2px solid #334155;
+            color: #cbd5e1;
+            padding: 12px 18px;
+            border-radius: 12px;
+            font-size: 14px;
+            flex: 1;
+            min-width: 200px;
+            transition: all 0.3s;
+        }
+        
+        .filter-input:focus {
+            outline: none;
+            border-color: #60a5fa;
+            box-shadow: 0 0 0 3px rgba(96,165,250,0.1);
         }
         
         .attacker-card {
-            background: #2d2d2d;
-            padding: 20px;
-            border-radius: 8px;
-            margin-bottom: 15px;
-            box-shadow: 0 2px 10px rgba(0,0,0,0.3);
-            border-left: 4px solid #ff6b6b;
+            background: #1e293b;
+            padding: 25px;
+            border-radius: 20px;
+            margin-bottom: 20px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+            border-left: 4px solid #60a5fa;
+            transition: all 0.3s;
+        }
+        
+        .attacker-card:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 15px 40px rgba(0,0,0,0.3);
         }
         
         .attacker-header {
             display: flex;
             justify-content: space-between;
             align-items: center;
-            margin-bottom: 15px;
+            margin-bottom: 20px;
+            flex-wrap: wrap;
+            gap: 15px;
         }
         
         .attacker-ip {
             font-size: 24px;
-            font-weight: bold;
-            color: #ff6b6b;
+            font-weight: 700;
+            color: #60a5fa;
             font-family: 'Courier New', monospace;
+            display: flex;
+            align-items: center;
+            gap: 10px;
         }
         
+        .severity-indicator {
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+        }
+        
+        .severity-critical { background: #ef4444; box-shadow: 0 0 10px #ef4444; }
+        .severity-high { background: #f59e0b; box-shadow: 0 0 10px #f59e0b; }
+        .severity-medium { background: #60a5fa; box-shadow: 0 0 10px #60a5fa; }
+        .severity-low { background: #22c55e; box-shadow: 0 0 10px #22c55e; }
+        
         .location-info {
-            background: #3d3d3d;
-            padding: 15px;
-            border-radius: 8px;
-            margin-bottom: 15px;
-            border-left: 4px solid #4ecdc4;
+            background: #0f172a;
+            padding: 20px;
+            border-radius: 15px;
+            margin-bottom: 20px;
+            border-left: 4px solid #22c55e;
         }
         
         .location-info h4 {
-            color: #4ecdc4;
-            margin-bottom: 10px;
+            color: #22c55e;
+            margin-bottom: 15px;
+            font-size: 16px;
         }
         
         .location-details {
             display: grid;
             grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-            gap: 10px;
-            color: #aaa;
+            gap: 15px;
+            color: #94a3b8;
             font-size: 14px;
         }
         
         .attack-badges {
             display: flex;
             flex-wrap: wrap;
-            gap: 8px;
-            margin-top: 10px;
+            gap: 10px;
+            margin-top: 15px;
         }
         
         .attack-badge {
-            padding: 6px 12px;
+            padding: 6px 14px;
             border-radius: 20px;
             font-size: 12px;
             font-weight: 600;
         }
         
         .badge-critical {
-            background: #ff4757;
+            background: #ef4444;
             color: white;
         }
         
         .badge-high {
-            background: #ff6b6b;
+            background: #f59e0b;
             color: white;
         }
         
         .badge-medium {
-            background: #ffd93d;
-            color: #1a1a1a;
+            background: #60a5fa;
+            color: white;
         }
         
         .badge-low {
-            background: #4ecdc4;
-            color: #1a1a1a;
+            background: #22c55e;
+            color: #0f172a;
         }
-        
-        .severity-indicator {
-            display: inline-block;
-            width: 12px;
-            height: 12px;
-            border-radius: 50%;
-            margin-right: 5px;
-        }
-        
-        .severity-critical { background: #ff4757; }
-        .severity-high { background: #ff6b6b; }
-        .severity-medium { background: #ffd93d; }
-        .severity-low { background: #4ecdc4; }
         
         .attacker-stats {
             display: grid;
             grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
-            gap: 10px;
-            margin-bottom: 15px;
+            gap: 15px;
+            margin-bottom: 20px;
         }
         
         .stat-item {
-            background: #3d3d3d;
-            padding: 10px;
-            border-radius: 4px;
+            background: #0f172a;
+            padding: 15px;
+            border-radius: 12px;
         }
         
         .stat-label {
-            color: #888;
+            color: #64748b;
             font-size: 12px;
-            margin-bottom: 5px;
+            margin-bottom: 8px;
+            text-transform: uppercase;
+            letter-spacing: 1px;
         }
         
         .stat-value {
-            color: #4ecdc4;
-            font-size: 18px;
-            font-weight: bold;
+            color: #60a5fa;
+            font-size: 24px;
+            font-weight: 700;
         }
         
         .sessions-list {
-            margin-top: 15px;
+            margin-top: 20px;
         }
         
         .session-item {
-            background: #3d3d3d;
-            padding: 15px;
-            margin-bottom: 10px;
-            border-radius: 4px;
-            border-left: 4px solid #4ecdc4;
+            background: #0f172a;
+            padding: 18px;
+            margin-bottom: 12px;
+            border-radius: 12px;
+            border-left: 3px solid #60a5fa;
             cursor: pointer;
             transition: all 0.3s;
         }
         
         .session-item:hover {
-            background: #4d4d4d;
+            background: #1e293b;
             transform: translateX(5px);
         }
         
@@ -181,85 +238,60 @@
             display: flex;
             justify-content: space-between;
             margin-bottom: 10px;
+            flex-wrap: wrap;
+            gap: 10px;
         }
         
         .session-protocol {
-            color: #ffd93d;
-            font-weight: bold;
+            color: #60a5fa;
+            font-weight: 600;
+            font-size: 14px;
         }
         
         .session-time {
-            color: #888;
+            color: #64748b;
             font-size: 12px;
         }
         
         .session-details {
-            color: #aaa;
-            font-size: 14px;
+            color: #94a3b8;
+            font-size: 13px;
+            line-height: 1.6;
         }
         
         .badge {
             display: inline-block;
-            padding: 4px 8px;
-            border-radius: 4px;
-            font-size: 12px;
-            font-weight: bold;
-            margin-right: 5px;
+            padding: 4px 10px;
+            border-radius: 10px;
+            font-size: 11px;
+            font-weight: 600;
+            margin-right: 8px;
         }
         
         .badge-ssh {
-            background: #4ecdc4;
-            color: #1a1a1a;
+            background: #22c55e;
+            color: #0f172a;
         }
         
         .badge-http {
-            background: #ffd93d;
-            color: #1a1a1a;
+            background: #f59e0b;
+            color: white;
         }
         
         .badge-db {
-            background: #ff6b6b;
+            background: #ef4444;
             color: white;
         }
         
         .badge-ftp {
-            background: #95e1d3;
-            color: #1a1a1a;
-        }
-        
-        .badge-ioc {
-            background: #ff4757;
+            background: #60a5fa;
             color: white;
-        }
-        
-        .filter-bar {
-            background: #2d2d2d;
-            padding: 15px;
-            border-radius: 8px;
-            margin-bottom: 20px;
-            display: flex;
-            gap: 10px;
-            align-items: center;
-        }
-        
-        .filter-input {
-            background: #3d3d3d;
-            border: 1px solid #4d4d4d;
-            color: #e0e0e0;
-            padding: 10px;
-            border-radius: 4px;
-            flex: 1;
-        }
-        
-        .filter-input:focus {
-            outline: none;
-            border-color: #4ecdc4;
         }
         
         .empty-state {
             text-align: center;
-            padding: 40px;
-            color: #888;
+            padding: 60px 20px;
+            color: #64748b;
         }
         
         .modal {
@@ -272,15 +304,16 @@
             background: rgba(0,0,0,0.8);
             z-index: 1000;
             overflow-y: auto;
+            backdrop-filter: blur(5px);
         }
         
         .modal-content {
-            background: #2d2d2d;
+            background: #1e293b;
             margin: 50px auto;
             padding: 30px;
-            border-radius: 8px;
+            border-radius: 20px;
             max-width: 800px;
-            box-shadow: 0 4px 20px rgba(0,0,0,0.5);
+            box-shadow: 0 20px 60px rgba(0,0,0,0.5);
         }
         
         .modal-header {
@@ -288,55 +321,83 @@
             justify-content: space-between;
             align-items: center;
             margin-bottom: 20px;
+            padding-bottom: 15px;
+            border-bottom: 2px solid #334155;
         }
         
         .modal-header h2 {
-            color: #ff6b6b;
+            color: #60a5fa;
         }
         
         .close {
-            color: #888;
+            color: #94a3b8;
             font-size: 28px;
             font-weight: bold;
             cursor: pointer;
+            line-height: 1;
+            transition: color 0.3s;
         }
         
         .close:hover {
-            color: #fff;
+            color: white;
         }
         
         .json-view {
-            background: #1a1a1a;
-            padding: 15px;
-            border-radius: 4px;
+            background: #0f172a;
+            padding: 20px;
+            border-radius: 12px;
             overflow-x: auto;
             font-family: 'Courier New', monospace;
             font-size: 12px;
-            color: #4ecdc4;
+            color: #22c55e;
+            line-height: 1.6;
+        }
+        
+        @media (max-width: 768px) {
+            body {
+                padding: 15px;
+            }
+            
+            .dashboard {
+                padding: 20px;
+                border-radius: 20px;
+            }
+            
+            .attacker-stats {
+                grid-template-columns: 1fr;
+            }
         }
     </style>
 </head>
 <body>
-    <div class="header">
-        <a href="/" class="back-link">← Back to Dashboard</a>
-        <h1>🎯 Attacker Tracking</h1>
-        <p>View all attackers and their activities by IP address</p>
+    <div class="dashboard">
+        <div class="topbar">
+            <div>
+                <a href="/" class="back-link">← Back to Dashboard</a>
+                <h1 style="color: #60a5fa; margin-top: 10px; font-size: 24px;">🎯 Attacker Tracking</h1>
+                <p style="color: #94a3b8; margin-top: 5px; font-size: 14px;">View all attackers and their activities by IP address</p>
+            </div>
+        </div>
+        
+        <div class="filter-bar">
+            <input type="text" id="ip-filter" class="filter-input" placeholder="Filter by IP address...">
+            <select id="protocol-filter" class="filter-input" style="flex: 0 0 180px;">
+                <option value="">All Protocols</option>
+                <option value="ssh">SSH</option>
+                <option value="http">HTTP</option>
+                <option value="postgres">PostgreSQL</option>
+                <option value="mysql">MySQL</option>
+                <option value="smb">SMB</option>
+                <option value="ftp">FTP</option>
+            </select>
+        </div>
+        
+        <div id="attackers-container">
+            <div class="empty-state">
+                <p>Loading attackers...</p>
+            </div>
+        </div>
     </div>
-    
-    <div class="filter-bar">
-        <input type="text" id="ip-filter" class="filter-input" placeholder="Filter by IP address...">
-        <select id="protocol-filter" class="filter-input" style="flex: 0 0 150px;">
-            <option value="">All Protocols</option>
-            <option value="ssh">SSH</option>
-            <option value="http">HTTP</option>
-            <option value="postgres">PostgreSQL</option>
-            <option value="mysql">MySQL</option>
-            <option value="smb">SMB</option>
-            <option value="ftp">FTP</option>
-        </select>
-    </div>
-    
-    <div id="attackers-container"></div>
     
     <div id="modal" class="modal">
         <div class="modal-content">
@@ -399,6 +460,8 @@
                 renderAttackers();
             } catch (error) {
                 console.error('Error loading attackers:', error);
+                document.getElementById('attackers-container').innerHTML = 
+                    '<div class="empty-state"><p>Error loading attackers. Please try again.</p></div>';
             }
         }
         
@@ -421,7 +484,7 @@
             }
             
             // Sort by number of sessions (most active first)
-            filtered.sort((a, b) => b.sessions.length - a.sessions.length);
+            filtered.sort((a, b) => (b.sessions ? b.sessions.length : 0) - (a.sessions ? a.sessions.length : 0));
             
             container.innerHTML = filtered.map(attacker => {
                 const protocols = Array.from(attacker.protocols);
@@ -448,7 +511,7 @@
                                 <span class="session-time">${session.start_time ? new Date(session.start_time).toLocaleString() : 'N/A'}</span>
                             </div>
                             <div class="session-details">
-                                ${attackCount > 0 ? `<strong style="color: #ff6b6b;">${attackCount} attack(s) detected</strong><br>` : ''}
+                                ${attackCount > 0 ? `<strong style="color: #ef4444;">${attackCount} attack(s) detected</strong><br>` : ''}
                                 ${attackBadges}
                             </div>
                         </div>
@@ -472,7 +535,6 @@
                 // Attack badges
                 const attackBadgesHtml = attacker.attack_categories && attacker.attack_categories.length > 0
                     ? attacker.attack_categories.map(cat => {
-                        // Get attack info (simplified - would need full category data)
                         const severity = cat.includes('sql') || cat.includes('command') || cat.includes('malware') ? 'critical' : 
                                         cat.includes('brute') || cat.includes('path') || cat.includes('xss') ? 'high' : 'medium';
                         return `<span class="attack-badge badge-${severity}">${cat.replace('_', ' ').toUpperCase()}</span>`;
@@ -480,9 +542,9 @@
                     : '<span class="attack-badge badge-low">No attacks detected</span>';
                 
                 // Severity indicator
-                const maxSeverity = attacker.severity_counts.critical > 0 ? 'critical' :
-                                   attacker.severity_counts.high > 0 ? 'high' :
-                                   attacker.severity_counts.medium > 0 ? 'medium' : 'low';
+                const maxSeverity = attacker.severity_counts && attacker.severity_counts.critical > 0 ? 'critical' :
+                                   attacker.severity_counts && attacker.severity_counts.high > 0 ? 'high' :
+                                   attacker.severity_counts && attacker.severity_counts.medium > 0 ? 'medium' : 'low';
                 
                 return `
                     <div class="attacker-card">
@@ -492,15 +554,15 @@
                                     <span class="severity-indicator severity-${maxSeverity}"></span>
                                     ${attacker.ip}
                                 </div>
-                                <div style="margin-top: 5px; color: #888; font-size: 14px;">
+                                <div style="margin-top: 8px; color: #94a3b8; font-size: 14px;">
                                     ${location.country || 'Unknown Location'}
                                 </div>
                             </div>
                             <div>${protocolBadges}</div>
                         </div>
                         ${locationHtml}
-                        <div style="margin-bottom: 15px;">
-                            <h4 style="color: #888; margin-bottom: 10px; font-size: 14px;">Attack Types:</h4>
+                        <div style="margin-bottom: 20px;">
+                            <h4 style="color: #94a3b8; margin-bottom: 12px; font-size: 14px;">Attack Types:</h4>
                             <div class="attack-badges">${attackBadgesHtml}</div>
                         </div>
                         <div class="attacker-stats">
@@ -510,15 +572,15 @@
                             </div>
                             <div class="stat-item">
                                 <div class="stat-label">Total Attacks</div>
-                                <div class="stat-value" style="color: ${attacker.total_attacks > 0 ? '#ff6b6b' : '#4ecdc4'}">${attacker.total_attacks || 0}</div>
+                                <div class="stat-value" style="color: ${attacker.total_attacks > 0 ? '#ef4444' : '#22c55e'}">${attacker.total_attacks || 0}</div>
                             </div>
                             <div class="stat-item">
                                 <div class="stat-label">Critical</div>
-                                <div class="stat-value" style="color: #ff4757">${attacker.severity_counts ? attacker.severity_counts.critical : 0}</div>
+                                <div class="stat-value" style="color: #ef4444">${attacker.severity_counts ? attacker.severity_counts.critical : 0}</div>
                             </div>
                             <div class="stat-item">
                                 <div class="stat-label">High</div>
-                                <div class="stat-value" style="color: #ff6b6b">${attacker.severity_counts ? attacker.severity_counts.high : 0}</div>
+                                <div class="stat-value" style="color: #f59e0b">${attacker.severity_counts ? attacker.severity_counts.high : 0}</div>
                             </div>
                             <div class="stat-item">
                                 <div class="stat-label">Commands</div>
@@ -538,8 +600,8 @@
                             </div>
                         </div>
                         <div class="sessions-list">
-                            <h4 style="margin-bottom: 10px; color: #888;">Sessions (${attacker.sessions ? attacker.sessions.length : 0}):</h4>
-                            ${sessionsHtml || '<p style="color: #888; padding: 10px;">No sessions available</p>'}
+                            <h4 style="margin-bottom: 15px; color: #94a3b8; font-size: 14px;">Sessions (${attacker.sessions ? attacker.sessions.length : 0}):</h4>
+                            ${sessionsHtml || '<p style="color: #64748b; padding: 10px;">No sessions available</p>'}
                         </div>
                     </div>
                 `;
@@ -548,7 +610,9 @@
         
         async function showSessionDetails(sessionId) {
             try {
+                if (!sessionId) return;
                 const response = await fetch(`/api/session/${sessionId}`);
+                if (!response.ok) throw new Error('Failed to load session');
                 const details = await response.json();
                 showModal('Session Details', JSON.stringify(details, null, 2));
             } catch (error) {
@@ -586,4 +650,3 @@
     </script>
 </body>
 </html>
-

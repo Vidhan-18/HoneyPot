@@ -128,3 +128,5 @@ Attacker → Honeypot Services → Logs → Log Aggregator → IOC Detector → 
 6. **Alerting**: Real-time alerts via multiple channels
 
 
+
+

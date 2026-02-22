@@ -15,3 +15,5 @@ RUN mkdir -p /logs
 CMD ["python", "log_aggregator.py"]
 
 
+
+

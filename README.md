@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 # Advanced Dual-Mode Honeypot Platform
 
 **⚠️ LEGAL AND ETHICAL WARNING ⚠️**
@@ -20,6 +21,10 @@ This honeypot platform is designed **EXCLUSIVELY** for:
 - All attacker interactions are logged and may be used for legal purposes
 
 ---
+
+## Overview
+
+> 📖 **For complete technical documentation, see [PROJECT_COMPLETE_GUIDE.md](PROJECT_COMPLETE_GUIDE.md)**
 
 ## Overview
 
@@ -156,3 +161,6 @@ For issues, questions, or contributions, please open an issue on the project rep
 
 **Remember: Only deploy in authorized, isolated environments. Unauthorized use may violate laws in your jurisdiction.**
 
+=======
+# HoneyPot
+>>>>>>> 1c9d9618ae17653bebe01ead81a9a422f9ab7d70

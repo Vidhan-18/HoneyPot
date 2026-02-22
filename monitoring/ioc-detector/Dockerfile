@@ -16,3 +16,5 @@ RUN mkdir -p /logs /iocs
 CMD ["python", "ioc_detector.py"]
 
 
+
+

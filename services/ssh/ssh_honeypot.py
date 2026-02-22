@@ -111,6 +111,16 @@ class HoneypotSSHServer(ServerInterface):
         if kind == 'session':
             return OPEN_SUCCEEDED
         return paramiko.OPEN_FAILED_ADMINISTRATIVELY_PROHIBITED
+
+    def check_channel_pty_request(self, channel, term, width, height, pixelwidth, pixelheight, modes):
+        """Accept PTY requests"""
+        logger.info(f"Session {self.session.session_id}: PTY requested")
+        return True
+    
+    def check_channel_shell_request(self, channel):
+        """Accept shell requests"""
+        logger.info(f"Session {self.session.session_id}: Shell requested")
+        return True
         
     def get_allowed_auths(self, username):
         """Return allowed authentication methods"""

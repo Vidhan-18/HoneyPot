@@ -1,147 +1,149 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Honeypot Dashboard - Login</title>
-    <style>
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-        }
-        
-        body {
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            min-height: 100vh;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            padding: 20px;
-        }
-        
-        .login-container {
-            background: rgba(255, 255, 255, 0.95);
-            padding: 40px;
-            border-radius: 20px;
-            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
-            width: 100%;
-            max-width: 400px;
-        }
-        
-        .logo {
-            text-align: center;
-            margin-bottom: 30px;
-        }
-        
-        .logo h1 {
-            color: #667eea;
-            font-size: 32px;
-            margin-bottom: 10px;
-        }
-        
-        .logo p {
-            color: #666;
-            font-size: 14px;
-        }
-        
-        .form-group {
-            margin-bottom: 20px;
-        }
-        
-        .form-group label {
-            display: block;
-            color: #333;
-            margin-bottom: 8px;
-            font-weight: 500;
-        }
-        
-        .form-group input {
-            width: 100%;
-            padding: 12px 15px;
-            border: 2px solid #e0e0e0;
-            border-radius: 8px;
-            font-size: 16px;
-            transition: all 0.3s;
-        }
-        
-        .form-group input:focus {
-            outline: none;
-            border-color: #667eea;
-            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
-        }
-        
-        .btn-login {
-            width: 100%;
-            padding: 14px;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            color: white;
-            border: none;
-            border-radius: 8px;
-            font-size: 16px;
-            font-weight: 600;
-            cursor: pointer;
-            transition: all 0.3s;
-            margin-top: 10px;
-        }
-        
-        .btn-login:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 10px 20px rgba(102, 126, 234, 0.3);
-        }
-        
-        .btn-login:active {
-            transform: translateY(0);
-        }
-        
-        .alert {
-            padding: 12px;
-            border-radius: 8px;
-            margin-bottom: 20px;
-            font-size: 14px;
-        }
-        
-        .alert-error {
-            background: #fee;
-            color: #c33;
-            border: 1px solid #fcc;
-        }
-        
-        .alert-info {
-            background: #eef;
-            color: #339;
-            border: 1px solid #ccf;
-        }
-        
-        .footer {
-            text-align: center;
-            margin-top: 30px;
-            color: #999;
-            font-size: 12px;
-        }
-        
-        .security-note {
-            background: #fff3cd;
-            border: 1px solid #ffc107;
-            padding: 15px;
-            border-radius: 8px;
-            margin-top: 20px;
-            font-size: 12px;
-            color: #856404;
-        }
-        
-        .security-note strong {
-            display: block;
-            margin-bottom: 5px;
-        }
-    </style>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>HPD Security Dashboard - Login</title>
+
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+
+<style>
+*{
+    margin:0;
+    padding:0;
+    box-sizing:border-box;
+}
+
+body{
+    font-family:'Inter',sans-serif;
+    background:linear-gradient(135deg,#dbeafe,#e9d5ff);
+    min-height:100vh;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    padding:20px;
+}
+
+.login-container{
+    background:#0f172a;
+    padding:50px;
+    border-radius:30px;
+    box-shadow:0 40px 80px rgba(0,0,0,0.25);
+    width:100%;
+    max-width:450px;
+}
+
+.logo{
+    text-align:center;
+    margin-bottom:40px;
+}
+
+.logo h1{
+    color:#60a5fa;
+    font-size:32px;
+    margin-bottom:10px;
+    font-weight:700;
+}
+
+.logo p{
+    color:#94a3b8;
+    font-size:14px;
+}
+
+.form-group{
+    margin-bottom:25px;
+}
+
+.form-group label{
+    display:block;
+    color:#cbd5e1;
+    margin-bottom:10px;
+    font-weight:500;
+    font-size:14px;
+}
+
+.form-group input{
+    width:100%;
+    padding:14px 18px;
+    border:2px solid #334155;
+    border-radius:12px;
+    font-size:16px;
+    background:#1e293b;
+    color:#cbd5e1;
+    transition:all 0.3s;
+}
+
+.form-group input:focus{
+    outline:none;
+    border-color:#60a5fa;
+    box-shadow:0 0 0 3px rgba(96,165,250,0.1);
+}
+
+.btn-login{
+    width:100%;
+    padding:16px;
+    background:linear-gradient(135deg,#60a5fa,#8b5cf6);
+    color:white;
+    border:none;
+    border-radius:12px;
+    font-size:16px;
+    font-weight:600;
+    cursor:pointer;
+    transition:all 0.3s;
+    margin-top:10px;
+}
+
+.btn-login:hover{
+    transform:translateY(-2px);
+    box-shadow:0 10px 20px rgba(96,165,250,0.3);
+}
+
+.btn-login:active{
+    transform:translateY(0);
+}
+
+.alert{
+    padding:14px;
+    border-radius:12px;
+    margin-bottom:25px;
+    font-size:14px;
+}
+
+.alert-error{
+    background:rgba(239,68,68,0.1);
+    color:#fca5a5;
+    border:1px solid rgba(239,68,68,0.3);
+}
+
+.alert-info{
+    background:rgba(96,165,250,0.1);
+    color:#93c5fd;
+    border:1px solid rgba(96,165,250,0.3);
+}
+
+.security-note{
+    background:rgba(245,158,11,0.1);
+    border:1px solid rgba(245,158,11,0.3);
+    padding:15px;
+    border-radius:12px;
+    margin-top:25px;
+    font-size:12px;
+    color:#fbbf24;
+    line-height:1.6;
+}
+
+.security-note strong{
+    display:block;
+    margin-bottom:8px;
+    color:#fcd34d;
+}
+</style>
 </head>
 <body>
     <div class="login-container">
         <div class="logo">
-            <h1>🚨 Honeypot</h1>
-            <p>Security Monitoring Dashboard</p>
+            <h1>🚨 HPD Security</h1>
+            <p>Honeypot Platform Dashboard</p>
         </div>
         
         {% with messages = get_flashed_messages(with_categories=true) %}
@@ -173,12 +175,6 @@
             Default credentials: admin / honeypot2024<br>
             Change these in production environment!
         </div>
-        
-        <div class="footer">
-            <p>Authorized Access Only</p>
-        </div>
     </div>
 </body>
 </html>
-
-
