@@ -10,7 +10,7 @@ import logging
 import time
 from datetime import datetime
 from pathlib import Path
-from flask import Flask, request, Response, jsonify, render_template_string
+from flask import Flask, request, Response, jsonify
 import threading
 
 # Setup logging
@@ -37,6 +37,36 @@ app.config['JSONIFY_PRETTYPRINT_REGULAR'] = True
 # Track requests
 request_counter = 0
 request_lock = threading.Lock()
+
+
+def detect_web_attack_indicators():
+    """
+    Detect common web attack patterns in query params, body, and headers.
+    Only logs indicators — never executes anything.
+    """
+    indicators = []
+    payload_sources = []
+
+    qs = request.query_string.decode("utf-8", errors="ignore")
+    body = request.get_data(as_text=True)
+    combined = f"{qs} {body}".lower()
+
+    if any(x in combined for x in ["' or 1=1", "\" or 1=1", "union select", "information_schema"]):
+        indicators.append("sql_injection")
+
+    if any(x in combined for x in ["<script", "javascript:", "onerror=", "onload="]):
+        indicators.append("xss")
+
+    if "../" in combined or "..%2f" in combined:
+        indicators.append("path_traversal")
+
+    if any(x in combined for x in [";cat ", ";ls ", "|bash", "|sh", "`"]):
+        indicators.append("command_injection")
+
+    if indicators:
+        logger.warning(f"Web attack indicators detected from {request.remote_addr}: {indicators}")
+
+    return indicators
 
 
 def log_request(request_data):
@@ -74,8 +104,9 @@ def log_request(request_data):
 
 @app.before_request
 def before_request():
-    """Log all requests"""
+    """Log all requests and detect attacks"""
     log_request(request)
+    detect_web_attack_indicators()
 
 
 @app.route('/', methods=['GET', 'POST'])
@@ -625,6 +656,65 @@ def login():
     return Response(html, mimetype='text/html')
 
 
+@app.route('/search', methods=['GET'])
+def search():
+    """Simulated search endpoint"""
+    q = request.args.get("q", "")
+    logger.warning(f"Search query received: {q}")
+
+    return jsonify({
+        "query": q,
+        "results": [
+            {"id": 101, "name": "Enterprise Server"},
+            {"id": 102, "name": "Cloud Platform"},
+            {"id": 103, "name": "Security Gateway"}
+        ]
+    })
+
+
+@app.route('/product', methods=['GET'])
+def product():
+    """Simulated product page"""
+    pid = request.args.get("id", "0")
+    logger.warning(f"Product lookup: id={pid}")
+
+    return jsonify({
+        "product_id": pid,
+        "name": "Enterprise Appliance",
+        "price": "$4999",
+        "status": "available"
+    })
+
+
+@app.route('/api/user', methods=['GET'])
+def api_user():
+    """Simulated user API"""
+    uid = request.args.get("id", "0")
+    logger.warning(f"API user lookup id={uid}")
+
+    return jsonify({
+        "id": uid,
+        "username": "user"+uid,
+        "role": "user",
+        "status": "active"
+    })
+
+
+@app.route('/upload', methods=['POST'])
+def upload():
+    """Simulated file upload endpoint"""
+    file = request.files.get("file")
+    filename = file.filename if file else "none"
+
+    logger.warning(f"File upload attempt: {filename}")
+
+    return jsonify({
+        "status": "received",
+        "filename": filename,
+        "message": "File queued for processing"
+    })
+
+
 @app.route('/api', methods=['GET', 'POST', 'PUT', 'DELETE'])
 def api():
     """Fake API endpoint"""
@@ -661,6 +751,110 @@ def api_database():
         'status': 'ok',
         'results': []
     })
+
+
+@app.route('/test-input', methods=['GET', 'POST'])
+def test_input():
+    """
+    Controlled test endpoint with a parameter attackers can target.
+    All input is logged and safely reflected back for analysis.
+    """
+    user_input = ""
+    if request.method == 'POST':
+        user_input = request.form.get('input', '')
+        logger.warning(f"Test input received on /test-input: {user_input}")
+    html = f"""
+    <!DOCTYPE html>
+    <html lang="en">
+    <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>Test Input - Corporate Portal</title>
+        <style>
+            * {{ margin: 0; padding: 0; box-sizing: border-box; }}
+            body {{
+                font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+                background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+                min-height: 100vh;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                padding: 20px;
+            }}
+            .card {{
+                background: white;
+                padding: 40px;
+                border-radius: 15px;
+                box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+                max-width: 600px;
+                width: 100%;
+            }}
+            .card h1 {{
+                color: #667eea;
+                margin-bottom: 10px;
+                text-align: center;
+            }}
+            .card p {{
+                color: #666;
+                text-align: center;
+                margin-bottom: 20px;
+            }}
+            form {{
+                margin-top: 10px;
+            }}
+            input[type="text"] {{
+                width: 100%;
+                padding: 12px 15px;
+                border: 2px solid #e0e0e0;
+                border-radius: 8px;
+                font-size: 16px;
+                margin-bottom: 15px;
+            }}
+            input[type="text"]:focus {{
+                outline: none;
+                border-color: #667eea;
+                box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+            }}
+            button {{
+                width: 100%;
+                padding: 12px;
+                background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+                color: white;
+                border: none;
+                border-radius: 8px;
+                font-size: 16px;
+                font-weight: 600;
+                cursor: pointer;
+            }}
+            .output {{
+                margin-top: 20px;
+                padding: 10px;
+                background: #f3f4f6;
+                border-radius: 8px;
+                font-family: 'Courier New', monospace;
+                font-size: 13px;
+                color: #374151;
+                word-break: break-all;
+            }}
+        </style>
+    </head>
+    <body>
+        <div class="card">
+            <h1>Test Input Endpoint</h1>
+            <p>Submit any payload here. It will be logged for analysis.</p>
+            <form method="POST">
+                <input type="text" name="input" placeholder="Enter payload or test string" required>
+                <button type="submit">Submit</button>
+            </form>
+            <div class="output">
+                <strong>Last submitted value (safely echoed):</strong><br>
+                {json.dumps(user_input)}
+            </div>
+        </div>
+    </body>
+    </html>
+    """
+    return Response(html, mimetype="text/html")
 
 
 @app.route('/phpmyadmin', methods=['GET', 'POST'])

@@ -3,1171 +3,400 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>HPD Security Dashboard</title>
+<title>Security Dashboard</title>
 
+<link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
+
 <script src="https://cdn.socket.io/4.5.4/socket.io.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 
 <style>
-*{
-    margin:0;
-    padding:0;
-    box-sizing:border-box;
-}
 
 body{
-    font-family:'Inter',sans-serif;
-    background:linear-gradient(135deg,#dbeafe,#e9d5ff);
-    padding:40px;
-    min-height:100vh;
+font-family:'Inter',sans-serif;
+background:#f4f6fb;
 }
 
-.dashboard{
-    max-width:1400px;
-    margin:auto;
-    background:#0f172a;
-    border-radius:30px;
-    padding:30px;
-    color:white;
-    box-shadow:0 40px 80px rgba(0,0,0,0.25);
+.sidebar{
+width:250px;
+height:100vh;
+position:fixed;
+left:0;
+top:0;
+background:linear-gradient(180deg,#0f172a,#1e293b);
+color:white;
+padding:25px;
 }
 
-/* TOP BAR */
-.topbar{
-    display:flex;
-    justify-content:space-between;
-    align-items:center;
-    margin-bottom:30px;
-    flex-wrap:wrap;
-    gap:15px;
+.sidebar h3{
+font-weight:700;
+margin-bottom:30px;
+color:#60a5fa;
 }
 
-.logo{
-    font-size:22px;
-    font-weight:700;
-    color:#60a5fa;
+.sidebar a{
+display:block;
+color:#cbd5e1;
+text-decoration:none;
+padding:10px 0;
+font-size:14px;
 }
 
-.nav{
-    display:flex;
-    gap:10px;
-    flex-wrap:wrap;
+.sidebar a:hover{
+color:white;
 }
 
-.nav button{
-    background:#1e293b;
-    border:none;
-    padding:8px 18px;
-    border-radius:20px;
-    color:#cbd5e1;
-    cursor:pointer;
-    transition:0.3s;
-    font-size:14px;
-    font-weight:500;
+.main{
+margin-left:260px;
+padding:30px;
 }
 
-.nav button:hover{
-    background:#334155;
-}
-
-.nav button.active{
-    background:white;
-    color:#0f172a;
-}
-
-.status{
-    font-size:14px;
-    color:#22c55e;
-    display:flex;
-    align-items:center;
-    gap:8px;
-}
-
-.status-dot{
-    width:8px;
-    height:8px;
-    background:#22c55e;
-    border-radius:50%;
-    animation:pulse 2s infinite;
-}
-
-@keyframes pulse{
-    0%,100%{opacity:1;}
-    50%{opacity:0.5;}
-}
-
-.logout-link{
-    color:#60a5fa;
-    text-decoration:none;
-    font-size:13px;
-    margin-left:15px;
-}
-
-.logout-link:hover{
-    text-decoration:underline;
-}
-
-/* STATS CARDS */
-.stats-grid{
-    display:grid;
-    grid-template-columns:repeat(auto-fit, minmax(200px, 1fr));
-    gap:20px;
-    margin-bottom:30px;
+.card{
+border:none;
+border-radius:16px;
+box-shadow:0 10px 25px rgba(0,0,0,0.08);
 }
 
 .stat-card{
-    background:linear-gradient(135deg,#1e293b,#334155);
-    padding:20px;
-    border-radius:20px;
-    border-left:4px solid #60a5fa;
+padding:20px;
 }
 
-.stat-card h3{
-    font-size:13px;
-    color:#94a3b8;
-    margin-bottom:10px;
-    text-transform:uppercase;
-    letter-spacing:1px;
+.stat-title{
+font-size:12px;
+color:#6b7280;
+text-transform:uppercase;
+letter-spacing:1px;
 }
 
-.stat-card .value{
-    font-size:32px;
-    font-weight:700;
-    color:#60a5fa;
+.stat-value{
+font-size:30px;
+font-weight:700;
+color:#2563eb;
 }
 
-/* GRID */
-.top-grid{
-    display:grid;
-    grid-template-columns:2fr 1fr 1fr;
-    gap:20px;
-    margin-bottom:20px;
-}
-
-.bottom-grid{
-    display:grid;
-    grid-template-columns:1fr 1.5fr 1fr;
-    gap:20px;
-}
-
-/* CARDS */
-.card{
-    background:#1e293b;
-    padding:20px;
-    border-radius:20px;
-    min-height:300px;
-}
-
-.card h3{
-    margin-bottom:15px;
-    font-size:16px;
-    color:#94a3b8;
-    font-weight:600;
-}
-
-/* SESSION LIST */
-.session-list{
-    max-height:400px;
-    overflow-y:auto;
+.chart-box{
+height:280px;
 }
 
 .session-item{
-    background:#0f172a;
-    padding:15px;
-    margin-bottom:10px;
-    border-radius:12px;
-    border-left:3px solid #60a5fa;
-    cursor:pointer;
-    transition:all 0.3s;
+padding:12px;
+border-bottom:1px solid #eee;
+cursor:pointer;
 }
 
 .session-item:hover{
-    background:#1e293b;
-    transform:translateX(5px);
+background:#f1f5f9;
 }
 
-.session-item h4{
-    color:#60a5fa;
-    margin-bottom:8px;
-    font-size:14px;
+.badge-attack{
+background:#ef4444;
+margin-right:5px;
 }
 
-.session-meta{
-    font-size:12px;
-    color:#64748b;
-    line-height:1.6;
+.activity-log{
+font-family:monospace;
+font-size:12px;
+background:#0f172a;
+color:#22c55e;
+padding:10px;
+border-radius:8px;
+margin-bottom:6px;
 }
 
-.location-badge{
-    display:inline-block;
-    background:#22c55e;
-    color:white;
-    padding:3px 8px;
-    border-radius:10px;
-    font-size:10px;
-    margin-left:8px;
-    font-weight:600;
-}
-
-.attack-tag{
-    display:inline-block;
-    background:#ef4444;
-    color:white;
-    padding:3px 8px;
-    border-radius:10px;
-    font-size:10px;
-    margin:4px 4px 0 0;
-    font-weight:600;
-}
-
-/* CHART CONTAINER */
-.chart-container{
-    position:relative;
-    height:250px;
-    margin-top:10px;
-}
-
-/* CALENDAR */
-.calendar{
-    display:grid;
-    grid-template-columns:repeat(7, 1fr);
-    gap:5px;
-    margin-top:10px;
-}
-
-.cal-day{
-    aspect-ratio:1;
-    background:#0f172a;
-    border-radius:8px;
-    display:flex;
-    align-items:center;
-    justify-content:center;
-    font-size:11px;
-    color:#64748b;
-    position:relative;
-}
-
-.cal-day.has-attacks{
-    background:#ef4444;
-    color:white;
-}
-
-.cal-day.has-attacks::after{
-    content:'';
-    position:absolute;
-    bottom:2px;
-    width:4px;
-    height:4px;
-    background:white;
-    border-radius:50%;
-}
-
-/* WORLD MAP */
-.world-map{
-    width:100%;
-    height:300px;
-    background:#0f172a;
-    border-radius:12px;
-    display:flex;
-    align-items:center;
-    justify-content:center;
-    color:#64748b;
-    font-size:14px;
-    position:relative;
-    overflow:hidden;
-}
-
-.map-marker{
-    position:absolute;
-    width:8px;
-    height:8px;
-    background:#ef4444;
-    border-radius:50%;
-    border:2px solid white;
-    box-shadow:0 0 10px rgba(239,68,68,0.5);
-    animation:pulse 2s infinite;
-}
-
-/* COUNTRY LIST */
-.country-list{
-    max-height:300px;
-    overflow-y:auto;
-}
-
-.country-item{
-    display:flex;
-    justify-content:space-between;
-    padding:12px;
-    background:#0f172a;
-    margin-bottom:8px;
-    border-radius:10px;
-    font-size:13px;
-}
-
-.country-name{
-    color:#cbd5e1;
-}
-
-.country-count{
-    color:#60a5fa;
-    font-weight:600;
-}
-
-/* IOC LIST */
-.ioc-item{
-    background:#0f172a;
-    padding:15px;
-    margin-bottom:10px;
-    border-radius:12px;
-    border-left:3px solid #f59e0b;
-    cursor:pointer;
-}
-
-.ioc-item.critical{
-    border-left-color:#ef4444;
-}
-
-.ioc-item h4{
-    color:#f59e0b;
-    margin-bottom:8px;
-    font-size:14px;
-}
-
-.ioc-item.critical h4{
-    color:#ef4444;
-}
-
-.ioc-meta{
-    font-size:12px;
-    color:#64748b;
-}
-
-/* LOG ITEM */
-.log-item{
-    background:#0f172a;
-    padding:12px;
-    margin-bottom:8px;
-    border-radius:8px;
-    font-family:'Courier New',monospace;
-    font-size:11px;
-    color:#94a3b8;
-    border-left:2px solid #22c55e;
-}
-
-/* SERVICE CARD */
-.service-card{
-    background:#0f172a;
-    padding:15px;
-    margin-bottom:10px;
-    border-radius:12px;
-    display:flex;
-    justify-content:space-between;
-    align-items:center;
-}
-
-.service-name{
-    color:#cbd5e1;
-    font-weight:600;
-}
-
-.service-status{
-    display:flex;
-    align-items:center;
-    gap:8px;
-}
-
-.status-dot-online{
-    width:8px;
-    height:8px;
-    background:#22c55e;
-    border-radius:50%;
-}
-
-.service-port{
-    color:#64748b;
-    font-size:12px;
-}
-
-/* HIDDEN TABS */
-.tab-content{
-    display:none;
-    animation:fade 0.3s ease-in-out;
-}
-
-.tab-content.active{
-    display:block;
-}
-
-@keyframes fade{
-    from{opacity:0; transform:translateY(10px);}
-    to{opacity:1; transform:translateY(0);}
-}
-
-/* EMPTY STATE */
-.empty-state{
-    text-align:center;
-    padding:60px 20px;
-    color:#64748b;
-}
-
-.empty-state p{
-    font-size:14px;
-}
-
-/* MODAL */
-.modal{
-    display:none;
-    position:fixed;
-    top:0;
-    left:0;
-    width:100%;
-    height:100%;
-    background:rgba(0,0,0,0.8);
-    z-index:1000;
-    overflow-y:auto;
-    backdrop-filter:blur(5px);
-}
-
-.modal-content{
-    background:#1e293b;
-    margin:50px auto;
-    padding:30px;
-    border-radius:20px;
-    max-width:800px;
-    box-shadow:0 20px 60px rgba(0,0,0,0.5);
-}
-
-.modal-header{
-    display:flex;
-    justify-content:space-between;
-    align-items:center;
-    margin-bottom:20px;
-    padding-bottom:15px;
-    border-bottom:2px solid #334155;
-}
-
-.modal-header h2{
-    color:#60a5fa;
-}
-
-.close{
-    color:#94a3b8;
-    font-size:28px;
-    cursor:pointer;
-    line-height:1;
-}
-
-.close:hover{
-    color:white;
-}
-
-.json-view{
-    background:#0f172a;
-    padding:20px;
-    border-radius:12px;
-    overflow-x:auto;
-    font-family:'Courier New',monospace;
-    font-size:12px;
-    color:#22c55e;
-    line-height:1.6;
-}
-
-/* SCROLLBAR */
-.session-list::-webkit-scrollbar,
-.country-list::-webkit-scrollbar{
-    width:6px;
-}
-
-.session-list::-webkit-scrollbar-track,
-.country-list::-webkit-scrollbar-track{
-    background:#0f172a;
-    border-radius:10px;
-}
-
-.session-list::-webkit-scrollbar-thumb,
-.country-list::-webkit-scrollbar-thumb{
-    background:#334155;
-    border-radius:10px;
-}
-
-.session-list::-webkit-scrollbar-thumb:hover,
-.country-list::-webkit-scrollbar-thumb:hover{
-    background:#475569;
-}
-
-/* RESPONSIVE */
-@media(max-width:1100px){
-    .top-grid{
-        grid-template-columns:1fr 1fr;
-    }
-}
-
-@media(max-width:900px){
-    .bottom-grid{
-        grid-template-columns:1fr 1fr;
-    }
-}
-
-@media(max-width:768px){
-    body{
-        padding:15px;
-    }
-
-    .dashboard{
-        padding:20px;
-        border-radius:20px;
-    }
-
-    .top-grid,
-    .bottom-grid{
-        grid-template-columns:1fr;
-    }
-
-    .nav{
-        overflow-x:auto;
-    }
-}
 </style>
 </head>
+
 <body>
 
-<div class="dashboard">
+<div class="sidebar">
+<h3>🚨 HPD</h3>
 
-    <!-- TOP BAR -->
-    <div class="topbar">
-        <div class="logo">🚨 HPD Security Dashboard</div>
+<a href="#" onclick="switchTab('sessions')">Sessions</a>
+<a href="#" onclick="switchTab('iocs')">IOCs</a>
+<a href="#" onclick="switchTab('logs')">Logs</a>
+<a href="#" onclick="switchTab('services')">Services</a>
+<a href="/attackers">Attackers</a>
 
-        <div class="nav">
-            <button class="active" onclick="switchTab('sessions', this)">Sessions</button>
-            <button onclick="switchTab('iocs', this)">IOCs</button>
-            <button onclick="switchTab('logs', this)">Logs</button>
-            <button onclick="switchTab('services', this)">Services</button>
-            <a href="/attackers" style="text-decoration:none;"><button>🎯 Attackers</button></a>
-        </div>
+<hr>
 
-        <div style="display:flex;align-items:center;gap:15px;">
-            <div class="status">
-                <span class="status-dot"></span>
-                <span id="connection-status">Connected</span>
-            </div>
-            <a href="/logout" class="logout-link">Logout</a>
-        </div>
-    </div>
+<div style="font-size:13px;color:#94a3b8;">
+Status:
+<span id="connection-status" style="color:#22c55e;">Connected</span>
+</div>
 
-    <!-- STATS GRID -->
-    <div class="stats-grid">
-        <div class="stat-card">
-            <h3>Total Sessions</h3>
-            <div class="value" id="stat-sessions">0</div>
-        </div>
-        <div class="stat-card">
-            <h3>Detected IOCs</h3>
-            <div class="value" id="stat-iocs">0</div>
-        </div>
-        <div class="stat-card">
-            <h3>Packet Captures</h3>
-            <div class="value" id="stat-pcaps">0</div>
-        </div>
-        <div class="stat-card">
-            <h3>Recent Activity</h3>
-            <div class="value" id="stat-activity">0</div>
-        </div>
-    </div>
+<br>
 
-    <!-- SESSIONS TAB -->
-    <div id="sessions" class="tab-content active">
+<a href="/logout">Logout</a>
+</div>
 
-        <div class="top-grid">
-            <div class="card">
-                <h3>Main Session Overview</h3>
-                <div class="chart-container">
-                    <canvas id="sessionsChart"></canvas>
-                </div>
-            </div>
+<div class="main">
 
-            <div class="card">
-                <h3>Attack Calendar</h3>
-                <div class="calendar" id="attackCalendar">
-                    <!-- Calendar will be generated here -->
-                </div>
-            </div>
+<div class="container-fluid">
 
-            <div class="card">
-                <h3>Attack Data</h3>
-                <div style="margin-top:15px;">
-                    <div style="display:flex;justify-content:space-between;margin-bottom:10px;">
-                        <span style="color:#94a3b8;font-size:13px;">Today</span>
-                        <span style="color:#60a5fa;font-weight:600;" id="stats-today">0</span>
-                    </div>
-                    <div style="display:flex;justify-content:space-between;margin-bottom:10px;">
-                        <span style="color:#94a3b8;font-size:13px;">This Week</span>
-                        <span style="color:#60a5fa;font-weight:600;" id="stats-week">0</span>
-                    </div>
-                    <div style="display:flex;justify-content:space-between;">
-                        <span style="color:#94a3b8;font-size:13px;">This Month</span>
-                        <span style="color:#60a5fa;font-weight:600;" id="stats-month">0</span>
-                    </div>
-                </div>
-            </div>
-        </div>
+<div class="row mb-4">
 
-        <div class="bottom-grid">
-            <div class="card">
-                <h3>Attack Ratio</h3>
-                <div class="chart-container">
-                    <canvas id="attackRatioChart"></canvas>
-                </div>
-            </div>
+<div class="col-md-3">
+<div class="card stat-card">
+<div class="stat-title">Total Sessions</div>
+<div class="stat-value" id="stat-sessions">0</div>
+</div>
+</div>
 
-            <div class="card">
-                <h3>World Map</h3>
-                <div class="world-map" id="worldMap">
-                    <div style="text-align:center;">
-                        <div style="font-size:48px;margin-bottom:10px;">🌍</div>
-                        <div>Attack locations will appear here</div>
-                    </div>
-                </div>
-            </div>
+<div class="col-md-3">
+<div class="card stat-card">
+<div class="stat-title">Detected IOCs</div>
+<div class="stat-value" id="stat-iocs">0</div>
+</div>
+</div>
 
-            <div class="card">
-                <h3>Country List</h3>
-                <div class="country-list" id="countryList">
-                    <div class="empty-state">
-                        <p>Loading countries...</p>
-                    </div>
-                </div>
-            </div>
-        </div>
+<div class="col-md-3">
+<div class="card stat-card">
+<div class="stat-title">Packet Captures</div>
+<div class="stat-value" id="stat-pcaps">0</div>
+</div>
+</div>
 
-        <div class="card" style="margin-top:20px;">
-            <h3>Recent Sessions</h3>
-            <div class="session-list" id="sessionsList">
-                <div class="empty-state">
-                    <p>Loading sessions...</p>
-                </div>
-            </div>
-        </div>
-
-    </div>
-
-    <!-- IOC TAB -->
-    <div id="iocs" class="tab-content">
-        <div class="card">
-            <h3>Detected IOCs</h3>
-            <div id="iocsList" style="max-height:600px;overflow-y:auto;">
-                <div class="empty-state">
-                    <p>Loading IOCs...</p>
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <!-- LOGS TAB -->
-    <div id="logs" class="tab-content">
-        <div class="card">
-            <h3>System Logs</h3>
-            <div id="logsList" style="max-height:600px;overflow-y:auto;">
-                <div class="empty-state">
-                    <p>Loading logs...</p>
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <!-- SERVICES TAB -->
-    <div id="services" class="tab-content">
-        <div class="card">
-            <h3>Service Status</h3>
-            <div id="servicesList">
-                <div class="empty-state">
-                    <p>Loading services...</p>
-                </div>
-            </div>
-        </div>
-    </div>
+<div class="col-md-3">
+<div class="card stat-card">
+<div class="stat-title">Recent Activity</div>
+<div class="stat-value" id="stat-activity">0</div>
+</div>
+</div>
 
 </div>
 
-<!-- MODAL -->
-<div id="modal" class="modal">
-    <div class="modal-content">
-        <div class="modal-header">
-            <h2 id="modal-title">Details</h2>
-            <span class="close" onclick="closeModal()">&times;</span>
-        </div>
-        <div id="modal-body"></div>
-    </div>
+<div id="sessions" class="tab-content">
+
+<div class="row">
+
+<div class="col-lg-8 mb-4">
+<div class="card p-3">
+<h6>Session Activity</h6>
+<div class="chart-box">
+<canvas id="sessionsChart"></canvas>
+</div>
+</div>
+</div>
+
+<div class="col-lg-4 mb-4">
+<div class="card p-3">
+<h6>Attack Ratio</h6>
+<div class="chart-box">
+<canvas id="attackRatioChart"></canvas>
+</div>
+</div>
+</div>
+
+</div>
+
+<div class="row">
+<div class="col-lg-12 mb-4">
+<div class="card p-3">
+<h6>World Map</h6>
+<div class="world-map" id="worldMap" style="height:400px;"></div>
+</div>
+</div>
+</div>
+
+<div class="row">
+
+<div class="col-lg-8">
+<div class="card p-3">
+<h6>Recent Sessions</h6>
+<div id="sessionsList"></div>
+</div>
+</div>
+
+<div class="col-lg-4">
+<div class="card p-3">
+<h6>Top Countries</h6>
+<div id="countryList"></div>
+</div>
+</div>
+
+</div>
+
+</div>
+
+<div id="iocs" class="tab-content" style="display:none;">
+<div class="card p-3">
+<h6>Detected IOCs</h6>
+<div id="iocsList"></div>
+</div>
+</div>
+
+<div id="logs" class="tab-content" style="display:none;">
+<div class="card p-3">
+<h6>System Logs</h6>
+<div id="logsList"></div>
+</div>
+</div>
+
+<div id="services" class="tab-content" style="display:none;">
+<div class="card p-3">
+<h6>Service Status</h6>
+<div id="servicesList"></div>
+</div>
+</div>
+
+</div>
+
 </div>
 
 <script>
+
 const socket = io();
-let currentTab = 'sessions';
-let sessionsChart = null;
-let attackRatioChart = null;
-let allSessions = [];
-let allIOCs = [];
 
-// Socket connection
-socket.on('connect', () => {
-    document.getElementById('connection-status').textContent = 'Connected';
-    loadData();
-});
+let sessionsChart=null;
+let attackRatioChart=null;
+let allSessions=[];
+let map=null;
 
-socket.on('disconnect', () => {
-    document.getElementById('connection-status').textContent = 'Disconnected';
-});
-
-socket.on('stats_update', (stats) => {
-    updateStats(stats);
-});
-
-function updateStats(stats) {
-    document.getElementById('stat-sessions').textContent = stats.total_sessions || 0;
-    document.getElementById('stat-iocs').textContent = stats.total_iocs || 0;
-    document.getElementById('stat-pcaps').textContent = stats.total_pcaps || 0;
-    document.getElementById('stat-activity').textContent = stats.recent_activity || 0;
-}
-
-function switchTab(tabId, button) {
-    currentTab = tabId;
-    
-    // Remove active from all buttons
-    document.querySelectorAll('.nav button').forEach(btn => {
-        btn.classList.remove('active');
-    });
-    
-    // Add active to clicked button
-    if(button) button.classList.add('active');
-    
-    // Hide all tab contents
-    document.querySelectorAll('.tab-content').forEach(tab => {
-        tab.classList.remove('active');
-    });
-    
-    // Show selected tab
-    document.getElementById(tabId).classList.add('active');
-    
-    loadData();
-}
-
-async function loadData() {
-    if (currentTab === 'sessions') {
-        await loadSessions();
-    } else if (currentTab === 'iocs') {
-        await loadIOCs();
-    } else if (currentTab === 'logs') {
-        await loadLogs();
-    } else if (currentTab === 'services') {
-        await loadServices();
-    }
-}
-
-async function loadSessions() {
-    try {
-        const response = await fetch('/api/sessions?limit=100');
-        if (!response.ok) throw new Error('Failed to load sessions');
-        allSessions = await response.json();
-        
-        updateSessionsChart();
-        updateAttackCalendar();
-        updateAttackStats();
-        updateWorldMap();
-        updateCountryList();
-        renderSessionsList();
-    } catch (error) {
-        console.error('Error loading sessions:', error);
-    }
-}
-
-function updateSessionsChart() {
-    const ctx = document.getElementById('sessionsChart');
-    if (!ctx) return;
-    
-    // Group sessions by hour
-    const now = new Date();
-    const hours = [];
-    const counts = [];
-    
-    for (let i = 23; i >= 0; i--) {
-        const hour = new Date(now);
-        hour.setHours(hour.getHours() - i);
-        hours.push(hour.getHours() + ':00');
-        counts.push(0);
-    }
-    
-    allSessions.forEach(session => {
-        if (session.start_time) {
-            const sessionTime = new Date(session.start_time);
-            const hoursAgo = Math.floor((now - sessionTime) / (1000 * 60 * 60));
-            if (hoursAgo >= 0 && hoursAgo < 24) {
-                counts[23 - hoursAgo]++;
-            }
-        }
-    });
-    
-    if (sessionsChart) sessionsChart.destroy();
-    
-    sessionsChart = new Chart(ctx, {
-        type: 'line',
-        data: {
-            labels: hours,
-            datasets: [{
-                label: 'Sessions',
-                data: counts,
-                borderColor: '#60a5fa',
-                backgroundColor: 'rgba(96, 165, 250, 0.1)',
-                tension: 0.4,
-                fill: true
-            }]
-        },
-        options: {
-            responsive: true,
-            maintainAspectRatio: false,
-            plugins: {
-                legend: { display: false }
-            },
-            scales: {
-                y: { beginAtZero: true, ticks: { color: '#94a3b8' }, grid: { color: '#334155' } },
-                x: { ticks: { color: '#94a3b8' }, grid: { color: '#334155' } }
-            }
-        }
-    });
-}
-
-function updateAttackCalendar() {
-    const calendar = document.getElementById('attackCalendar');
-    if (!calendar) return;
-    
-    calendar.innerHTML = '';
-    
-    // Get last 30 days
-    const days = [];
-    const today = new Date();
-    for (let i = 29; i >= 0; i--) {
-        const date = new Date(today);
-        date.setDate(date.getDate() - i);
-        days.push(date);
-    }
-    
-    // Count attacks per day
-    const attackCounts = {};
-    allSessions.forEach(session => {
-        if (session.start_time) {
-            const date = new Date(session.start_time).toDateString();
-            attackCounts[date] = (attackCounts[date] || 0) + 1;
-        }
-    });
-    
-    days.forEach(day => {
-        const dayEl = document.createElement('div');
-        dayEl.className = 'cal-day';
-        dayEl.textContent = day.getDate();
-        
-        if (attackCounts[day.toDateString()]) {
-            dayEl.classList.add('has-attacks');
-        }
-        
-        calendar.appendChild(dayEl);
-    });
-}
-
-function updateAttackStats() {
-    const now = new Date();
-    const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-    const weekAgo = new Date(today);
-    weekAgo.setDate(weekAgo.getDate() - 7);
-    const monthAgo = new Date(today);
-    monthAgo.setMonth(monthAgo.getMonth() - 1);
-    
-    let todayCount = 0, weekCount = 0, monthCount = 0;
-    
-    allSessions.forEach(session => {
-        if (session.start_time) {
-            const sessionTime = new Date(session.start_time);
-            if (sessionTime >= today) todayCount++;
-            if (sessionTime >= weekAgo) weekCount++;
-            if (sessionTime >= monthAgo) monthCount++;
-        }
-    });
-    
-    document.getElementById('stats-today').textContent = todayCount;
-    document.getElementById('stats-week').textContent = weekCount;
-    document.getElementById('stats-month').textContent = monthCount;
-}
-
-function updateAttackRatioChart() {
-    const ctx = document.getElementById('attackRatioChart');
-    if (!ctx) return;
-    
-    const attackTypes = {};
-    allSessions.forEach(session => {
-        if (session.attacks && session.attacks.length > 0) {
-            session.attacks.forEach(attack => {
-                const type = attack.category || attack.name || 'Unknown';
-                attackTypes[type] = (attackTypes[type] || 0) + 1;
-            });
-        }
-    });
-    
-    const labels = Object.keys(attackTypes);
-    const data = Object.values(attackTypes);
-    
-    if (attackRatioChart) attackRatioChart.destroy();
-    
-    attackRatioChart = new Chart(ctx, {
-        type: 'doughnut',
-        data: {
-            labels: labels,
-            datasets: [{
-                data: data,
-                backgroundColor: [
-                    '#ef4444', '#f59e0b', '#60a5fa', '#22c55e', '#a855f7', '#ec4899'
-                ]
-            }]
-        },
-        options: {
-            responsive: true,
-            maintainAspectRatio: false,
-            plugins: {
-                legend: { position: 'bottom', labels: { color: '#94a3b8', font: { size: 11 } } }
-            }
-        }
-    });
-}
-
-function updateWorldMap() {
-    const map = document.getElementById('worldMap');
-    if (!map) return;
-    
-    // Simple visualization - in production, use a proper map library
-    const countries = {};
-    allSessions.forEach(session => {
-        if (session.location && session.location.country && session.location.country !== 'Unknown') {
-            const country = session.location.country;
-            countries[country] = (countries[country] || 0) + 1;
-        }
-    });
-    
-    if (Object.keys(countries).length === 0) {
-        map.innerHTML = '<div style="text-align:center;"><div style="font-size:48px;margin-bottom:10px;">🌍</div><div>No location data available</div></div>';
-        return;
-    }
-    
-    // Simple text representation
-    const topCountries = Object.entries(countries)
-        .sort((a, b) => b[1] - a[1])
-        .slice(0, 5);
-    
-    map.innerHTML = `
-        <div style="text-align:center;width:100%;">
-            <div style="font-size:48px;margin-bottom:15px;">🌍</div>
-            <div style="font-size:12px;color:#94a3b8;margin-bottom:10px;">Top Attack Sources</div>
-            ${topCountries.map(([country, count]) => 
-                `<div style="margin:5px 0;color:#cbd5e1;">${country}: <span style="color:#60a5fa;">${count}</span></div>`
-            ).join('')}
-        </div>
-    `;
-}
-
-function updateCountryList() {
-    const list = document.getElementById('countryList');
-    if (!list) return;
-    
-    const countries = {};
-    allSessions.forEach(session => {
-        if (session.location && session.location.country && session.location.country !== 'Unknown') {
-            const country = session.location.country;
-            countries[country] = (countries[country] || 0) + 1;
-        }
-    });
-    
-    if (Object.keys(countries).length === 0) {
-        list.innerHTML = '<div class="empty-state"><p>No country data available</p></div>';
-        return;
-    }
-    
-    const sorted = Object.entries(countries)
-        .sort((a, b) => b[1] - a[1])
-        .slice(0, 10);
-    
-    list.innerHTML = sorted.map(([country, count]) => `
-        <div class="country-item">
-            <span class="country-name">${country}</span>
-            <span class="country-count">${count}</span>
-        </div>
-    `).join('');
-}
-
-function renderSessionsList() {
-    const list = document.getElementById('sessionsList');
-    if (!list) return;
-    
-    if (allSessions.length === 0) {
-        list.innerHTML = '<div class="empty-state"><p>No sessions found</p></div>';
-        return;
-    }
-    
-    const recentSessions = allSessions.slice(0, 20);
-    
-    list.innerHTML = recentSessions.map(session => {
-        const location = session.location || {};
-        const locationBadge = location.country && location.country !== 'Unknown' 
-            ? `<span class="location-badge">📍 ${location.country}${location.city && location.city !== 'Unknown' ? ', ' + location.city : ''}</span>` 
-            : '';
-        
-        const attackTags = session.attacks && session.attacks.length > 0
-            ? session.attacks.map(a => `<span class="attack-tag">${a.icon || ''} ${a.name || a.category || 'Attack'}</span>`).join('')
-            : '';
-        
-        return `
-            <div class="session-item" onclick="showSessionDetails('${session.file || session.session_id || ''}')">
-                <h4>${session.protocol || 'Unknown'} Session ${locationBadge}</h4>
-                <div class="session-meta">
-                    IP: ${session.client_ip || 'Unknown'} | 
-                    Time: ${new Date(session.start_time || Date.now()).toLocaleString()} |
-                    Commands: ${session.commands?.length || 0}
-                    ${session.attack_summary && session.attack_summary.total > 0 ? `| Attacks: ${session.attack_summary.total}` : ''}
-                </div>
-                ${attackTags ? `<div style="margin-top:8px;">${attackTags}</div>` : ''}
-            </div>
-        `;
-    }).join('');
-    
-    // Update attack ratio chart after sessions load
-    setTimeout(updateAttackRatioChart, 100);
-}
-
-async function loadIOCs() {
-    try {
-        const response = await fetch('/api/iocs?limit=50');
-        if (!response.ok) throw new Error('Failed to load IOCs');
-        allIOCs = await response.json();
-        
-        const list = document.getElementById('iocsList');
-        if (allIOCs.length === 0) {
-            list.innerHTML = '<div class="empty-state"><p>No IOCs detected</p></div>';
-            return;
-        }
-        
-        list.innerHTML = allIOCs.map(ioc => {
-            const severity = ioc.type && ioc.type.includes('critical') ? 'critical' : '';
-            return `
-                <div class="ioc-item ${severity}" onclick="showIOCDetails('${ioc.file || ioc.session_id || ''}')">
-                    <h4>🚨 ${ioc.type || 'Unknown IOC'}</h4>
-                    <div class="ioc-meta">
-                        Pattern: ${ioc.pattern || 'N/A'} | 
-                        Time: ${new Date(ioc.timestamp || Date.now()).toLocaleString()}
-                    </div>
-                </div>
-            `;
-        }).join('');
-    } catch (error) {
-        console.error('Error loading IOCs:', error);
-        document.getElementById('iocsList').innerHTML = 
-            '<div class="empty-state"><p>Error loading IOCs</p></div>';
-    }
-}
-
-async function loadLogs() {
-    try {
-        const response = await fetch('/api/logs?limit=100');
-        if (!response.ok) throw new Error('Failed to load logs');
-        const logs = await response.json();
-        
-        const list = document.getElementById('logsList');
-        if (logs.length === 0) {
-            list.innerHTML = '<div class="empty-state"><p>No logs available</p></div>';
-            return;
-        }
-        
-        list.innerHTML = logs.reverse().map(log => {
-            const message = typeof log === 'object' ? (log.message || JSON.stringify(log)) : log;
-            return `<div class="log-item">${message.substring(0, 500)}</div>`;
-        }).join('');
-    } catch (error) {
-        console.error('Error loading logs:', error);
-        document.getElementById('logsList').innerHTML = 
-            '<div class="empty-state"><p>Error loading logs</p></div>';
-    }
-}
-
-async function loadServices() {
-    try {
-        const response = await fetch('/api/services');
-        if (!response.ok) throw new Error('Failed to load services');
-        const services = await response.json();
-        
-        const list = document.getElementById('servicesList');
-        list.innerHTML = Object.entries(services).map(([name, info]) => {
-            const ports = Array.isArray(info.ports) ? info.ports.join(', ') : (info.port || 'N/A');
-            return `
-                <div class="service-card">
-                    <div>
-                        <div class="service-name">${name}</div>
-                        <div class="service-port">Port(s): ${ports}</div>
-                    </div>
-                    <div class="service-status">
-                        <span class="status-dot-online"></span>
-                        <span style="color:#22c55e;font-size:13px;">${info.status}</span>
-                    </div>
-                </div>
-            `;
-        }).join('');
-    } catch (error) {
-        console.error('Error loading services:', error);
-        document.getElementById('servicesList').innerHTML = 
-            '<div class="empty-state"><p>Error loading services</p></div>';
-    }
-}
-
-async function showSessionDetails(sessionId) {
-    try {
-        if (!sessionId) return;
-        const response = await fetch(`/api/session/${sessionId}`);
-        if (!response.ok) throw new Error('Failed to load session');
-        const details = await response.json();
-        showModal('Session Details', JSON.stringify(details, null, 2));
-    } catch (error) {
-        console.error('Error loading session:', error);
-    }
-}
-
-async function showIOCDetails(iocId) {
-    try {
-        if (!iocId) return;
-        const response = await fetch(`/api/ioc/${iocId}`);
-        if (!response.ok) throw new Error('Failed to load IOC');
-        const details = await response.json();
-        showModal('IOC Details', JSON.stringify(details, null, 2));
-    } catch (error) {
-        console.error('Error loading IOC:', error);
-    }
-}
-
-function showModal(title, content) {
-    document.getElementById('modal-title').textContent = title;
-    document.getElementById('modal-body').innerHTML = `<div class="json-view">${content}</div>`;
-    document.getElementById('modal').style.display = 'block';
-}
-
-function closeModal() {
-    document.getElementById('modal').style.display = 'none';
-}
-
-// Close modal on outside click
-window.onclick = function(event) {
-    const modal = document.getElementById('modal');
-    if (event.target == modal) {
-        closeModal();
-    }
-}
-
-// Auto-refresh every 30 seconds
-setInterval(loadData, 30000);
-
-// Initial load
+socket.on('connect',()=>{
+document.getElementById("connection-status").textContent="Connected";
 loadData();
+});
+
+socket.on('disconnect',()=>{
+document.getElementById("connection-status").textContent="Disconnected";
+});
+
+socket.on('stats_update',(stats)=>{
+document.getElementById("stat-sessions").textContent=stats.total_sessions||0;
+document.getElementById("stat-iocs").textContent=stats.total_iocs||0;
+document.getElementById("stat-pcaps").textContent=stats.total_pcaps||0;
+document.getElementById("stat-activity").textContent=stats.recent_activity||0;
+});
+
+function switchTab(tab){
+
+document.querySelectorAll(".tab-content").forEach(el=>el.style.display="none");
+document.getElementById(tab).style.display="block";
+
+loadData();
+
+}
+
+async function loadData(){
+
+const res=await fetch("/api/sessions?limit=100");
+allSessions=await res.json();
+
+renderSessions();
+renderCountryList();
+updateCharts();
+
+}
+
+function renderSessions(){
+
+const list=document.getElementById("sessionsList");
+
+list.innerHTML=allSessions.slice(0,20).map(s=>{
+
+return `
+<div class="session-item">
+<strong>${s.protocol||"session"}</strong>
+<br>
+IP: ${s.client_ip||"unknown"}
+<br>
+Commands: ${s.commands?.length||0}
+</div>
+`;
+
+}).join("");
+
+}
+
+function renderCountryList(){
+
+const map={};
+
+allSessions.forEach(s=>{
+if(s.location?.country){
+map[s.location.country]=(map[s.location.country]||0)+1;
+}
+});
+
+const list=document.getElementById("countryList");
+
+list.innerHTML=Object.entries(map)
+.sort((a,b)=>b[1]-a[1])
+.slice(0,10)
+.map(([c,v])=>`<div>${c} — <b>${v}</b></div>`)
+.join("");
+
+}
+
+function updateCharts(){
+
+const ctx=document.getElementById("sessionsChart");
+
+if(sessionsChart) sessionsChart.destroy();
+
+sessionsChart=new Chart(ctx,{
+type:"line",
+data:{
+labels:allSessions.map((_,i)=>i),
+datasets:[{
+data:allSessions.map(()=>1),
+borderColor:"#3b82f6",
+fill:true
+}]
+},
+options:{plugins:{legend:{display:false}}}
+});
+
+const ctx2=document.getElementById("attackRatioChart");
+
+if(attackRatioChart) attackRatioChart.destroy();
+
+attackRatioChart=new Chart(ctx2,{
+type:"doughnut",
+data:{
+labels:["SSH","HTTP","Other"],
+datasets:[{
+data:[5,3,2],
+backgroundColor:["#ef4444","#f59e0b","#60a5fa"]
+}]
+}
+});
+
+}
+
+function initMap(){
+map = L.map('worldMap').setView([20, 0], 2);
+
+L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+attribution: '© OpenStreetMap contributors'
+}).addTo(map);
+
+// Add some example markers for testing
+addAttackMarker(37.7749, -122.4194, "San Francisco, 192.168.1.100");
+addAttackMarker(51.5074, -0.1278, "London, 10.0.0.50");
+addAttackMarker(35.6762, 139.6503, "Tokyo, 172.16.0.25");
+}
+
+function addAttackMarker(lat, lon, label) {
+L.circleMarker([lat, lon], {
+radius: 6,
+color: "red",
+fillOpacity: 0.8
+})
+.addTo(map)
+.bindPopup(label);
+}
+
+setInterval(loadData,30000);
+
+loadData();
+
+// Initialize map after DOM is ready
+document.addEventListener('DOMContentLoaded', initMap);
+
 </script>
 
 </body>
