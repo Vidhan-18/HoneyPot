@@ -1,6 +1,6 @@
 MIT License
 
-Copyright (c) 2024 Honeypot Platform Contributors
+Copyright (c) 2026 Honeypot Defense Platform Contributors
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal
@@ -19,24 +19,3 @@ AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
 LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
-
----
-
-IMPORTANT LEGAL NOTICE:
-
-This software is designed for EDUCATIONAL AND RESEARCH PURPOSES ONLY. 
-
-Unauthorized deployment of this software on networks you do not own or have 
-explicit written permission to test may violate:
-- Computer fraud and abuse laws
-- Terms of service agreements
-- Local and international cybersecurity regulations
-
-The authors and contributors are not responsible for misuse of this software.
-Users are solely responsible for ensuring compliance with all applicable laws.
-
-See SAFETY.md for detailed safety and legal guidelines.
-
-
-
-

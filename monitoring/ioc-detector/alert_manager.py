@@ -410,14 +410,18 @@ if __name__ == '__main__':
     
     # Test connections
     connections = manager.test_connections()
-    print("\nConnection Status:")
+    logger.info("Connection Status:")
     for channel, status in connections.items():
-        print(f"  {channel}: {'✓ Connected' if status else '✗ Not configured'}")
+        icon = "✓" if status else "✗"
+        status_text = "Connected" if status else "Not configured"
+        logger.info(f"  {icon} {channel}: {status_text}")
     
     # Send test alert
-    print("\nSending test alert...")
+    logger.info("Sending test alert...")
     results = manager.send_test_alert()
     
-    print("\nResults:")
+    logger.info("Results:")
     for channel, success in results.items():
-        print(f"  {channel}: {'✓ Sent' if success else '✗ Failed'}")
+        icon = "✓" if success else "✗"
+        status_text = "Sent" if success else "Failed"
+        logger.info(f"  {icon} {channel}: {status_text}")

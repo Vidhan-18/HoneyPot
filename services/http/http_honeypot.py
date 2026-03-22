@@ -80,137 +80,552 @@ def before_request():
 
 @app.route('/', methods=['GET', 'POST'])
 def index():
-    """Main page"""
+    """Main page - Premium Redesign"""
     html = """
     <!DOCTYPE html>
     <html lang="en">
     <head>
         <meta charset="UTF-8">
         <meta name="viewport" content="width=device-width, initial-scale=1.0">
-        <title>Corporate Portal - Welcome</title>
+        <title>Nexus Portal — Enterprise Access</title>
+        <link rel="preconnect" href="https://fonts.googleapis.com">
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+        <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Space+Grotesk:wght@600;700&display=swap" rel="stylesheet">
         <style>
             * { margin: 0; padding: 0; box-sizing: border-box; }
-            body {
-                font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-                background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-                min-height: 100vh;
-                color: #333;
+            
+            :root {
+                --void: #0D0D12;
+                --cosmic: #1A1429;
+                --nebula: #2D1F4F;
+                --aurora: #7C3AED;
+                --lavender: #A78BFA;
+                --coral: #F97066;
+                --teal: #14B8A6;
+                --solar: #FBBF24;
+                --pink: #EC4899;
+                --text-primary: #F8FAFC;
+                --text-secondary: #94A3B8;
+                --glass: rgba(26, 20, 41, 0.8);
             }
+            
+            body {
+                font-family: 'Inter', sans-serif;
+                background: var(--void);
+                min-height: 100vh;
+                color: var(--text-primary);
+                overflow-x: hidden;
+            }
+            
+            /* Animated background */
+            .bg-mesh {
+                position: fixed;
+                top: 0;
+                left: 0;
+                width: 100%;
+                height: 100%;
+                z-index: -1;
+                background: 
+                    radial-gradient(ellipse at 20% 20%, rgba(124, 58, 237, 0.15) 0%, transparent 50%),
+                    radial-gradient(ellipse at 80% 80%, rgba(20, 184, 166, 0.1) 0%, transparent 50%),
+                    radial-gradient(ellipse at 50% 50%, rgba(249, 112, 102, 0.05) 0%, transparent 70%);
+                animation: meshMove 20s ease-in-out infinite;
+            }
+            
+            @keyframes meshMove {
+                0%, 100% { transform: translate(0, 0) scale(1); }
+                33% { transform: translate(30px, -30px) scale(1.1); }
+                66% { transform: translate(-20px, 20px) scale(0.95); }
+            }
+            
+            /* Navigation */
             .navbar {
-                background: rgba(255, 255, 255, 0.95);
-                padding: 15px 30px;
-                box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+                background: var(--glass);
+                backdrop-filter: blur(20px);
+                border-bottom: 1px solid rgba(124, 58, 237, 0.2);
+                padding: 20px 40px;
                 display: flex;
                 justify-content: space-between;
                 align-items: center;
+                position: sticky;
+                top: 0;
+                z-index: 100;
             }
+            
             .navbar-brand {
-                font-size: 24px;
-                font-weight: bold;
-                color: #667eea;
+                font-family: 'Space Grotesk', sans-serif;
+                font-size: 26px;
+                font-weight: 700;
+                background: linear-gradient(135deg, var(--aurora) 0%, var(--coral) 100%);
+                -webkit-background-clip: text;
+                -webkit-text-fill-color: transparent;
+                background-clip: text;
                 text-decoration: none;
+                display: flex;
+                align-items: center;
+                gap: 10px;
             }
+            
+            .navbar-brand::before {
+                content: '◆';
+                font-size: 20px;
+                background: linear-gradient(135deg, var(--aurora) 0%, var(--teal) 100%);
+                -webkit-background-clip: text;
+                -webkit-text-fill-color: transparent;
+            }
+            
             .navbar-nav {
                 display: flex;
-                gap: 20px;
+                gap: 8px;
                 list-style: none;
             }
+            
             .navbar-nav a {
-                color: #333;
+                color: var(--text-secondary);
                 text-decoration: none;
                 font-weight: 500;
+                font-size: 14px;
+                padding: 10px 20px;
+                border-radius: 12px;
+                transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+                position: relative;
+                overflow: hidden;
             }
-            .navbar-nav a:hover { color: #667eea; }
-            .hero {
-                text-align: center;
-                padding: 80px 20px;
-                color: white;
+            
+            .navbar-nav a::before {
+                content: '';
+                position: absolute;
+                inset: 0;
+                background: linear-gradient(135deg, rgba(124, 58, 237, 0.2) 0%, rgba(20, 184, 166, 0.1) 100%);
+                opacity: 0;
+                transition: opacity 0.3s;
             }
-            .hero h1 {
-                font-size: 48px;
-                margin-bottom: 20px;
-            }
-            .hero p {
-                font-size: 20px;
-                margin-bottom: 30px;
-                opacity: 0.9;
-            }
-            .btn {
-                display: inline-block;
-                padding: 15px 40px;
-                background: white;
-                color: #667eea;
-                text-decoration: none;
-                border-radius: 8px;
-                font-weight: 600;
-                margin: 10px;
-                transition: all 0.3s;
-            }
-            .btn:hover {
+            
+            .navbar-nav a:hover {
+                color: var(--text-primary);
                 transform: translateY(-2px);
-                box-shadow: 0 10px 20px rgba(0,0,0,0.2);
             }
-            .features {
-                max-width: 1200px;
+            
+            .navbar-nav a:hover::before {
+                opacity: 1;
+            }
+            
+            /* Hero Section */
+            .hero {
+                padding: 100px 40px 60px;
+                max-width: 1400px;
                 margin: 0 auto;
-                padding: 60px 20px;
                 display: grid;
-                grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
-                gap: 30px;
+                grid-template-columns: 1.2fr 1fr;
+                gap: 80px;
+                align-items: center;
             }
-            .feature-card {
-                background: white;
-                padding: 30px;
-                border-radius: 15px;
-                box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+            
+            .hero-content h1 {
+                font-family: 'Space Grotesk', sans-serif;
+                font-size: 64px;
+                font-weight: 700;
+                line-height: 1.1;
+                margin-bottom: 24px;
+                background: linear-gradient(135deg, var(--text-primary) 0%, var(--lavender) 100%);
+                -webkit-background-clip: text;
+                -webkit-text-fill-color: transparent;
+                background-clip: text;
             }
-            .feature-card h3 {
-                color: #667eea;
-                margin-bottom: 15px;
+            
+            .hero-content h1 span {
+                display: block;
+                background: linear-gradient(135deg, var(--aurora) 0%, var(--coral) 50%, var(--teal) 100%);
+                -webkit-background-clip: text;
+                -webkit-text-fill-color: transparent;
             }
-            .footer {
+            
+            .hero-content p {
+                font-size: 20px;
+                color: var(--text-secondary);
+                line-height: 1.7;
+                margin-bottom: 40px;
+                max-width: 500px;
+            }
+            
+            .hero-actions {
+                display: flex;
+                gap: 16px;
+                flex-wrap: wrap;
+            }
+            
+            .btn {
+                display: inline-flex;
+                align-items: center;
+                gap: 10px;
+                padding: 16px 32px;
+                font-family: 'Inter', sans-serif;
+                font-weight: 600;
+                font-size: 15px;
+                text-decoration: none;
+                border-radius: 14px;
+                transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+                position: relative;
+                overflow: hidden;
+                border: none;
+                cursor: pointer;
+            }
+            
+            .btn-primary {
+                background: linear-gradient(135deg, var(--coral) 0%, var(--pink) 100%);
+                color: white;
+                box-shadow: 0 4px 20px rgba(249, 112, 102, 0.4);
+            }
+            
+            .btn-primary:hover {
+                transform: translateY(-3px) scale(1.02);
+                box-shadow: 0 8px 30px rgba(249, 112, 102, 0.5);
+            }
+            
+            .btn-secondary {
+                background: rgba(124, 58, 237, 0.1);
+                color: var(--lavender);
+                border: 1px solid rgba(124, 58, 237, 0.3);
+            }
+            
+            .btn-secondary:hover {
+                background: rgba(124, 58, 237, 0.2);
+                border-color: rgba(124, 58, 237, 0.5);
+                transform: translateY(-3px);
+            }
+            
+            .btn::after {
+                content: '→';
+                transition: transform 0.3s;
+            }
+            
+            .btn:hover::after {
+                transform: translateX(4px);
+            }
+            
+            /* Hero Visual */
+            .hero-visual {
+                position: relative;
+                height: 400px;
+            }
+            
+            .dashboard-preview {
+                position: absolute;
+                width: 100%;
+                height: 100%;
+                background: linear-gradient(145deg, var(--cosmic) 0%, var(--nebula) 100%);
+                border-radius: 24px;
+                border: 1px solid rgba(124, 58, 237, 0.2);
+                box-shadow: 
+                    0 25px 50px -12px rgba(0, 0, 0, 0.5),
+                    0 0 0 1px rgba(124, 58, 237, 0.1);
+                padding: 24px;
+                display: flex;
+                flex-direction: column;
+                gap: 16px;
+                animation: float 6s ease-in-out infinite;
+            }
+            
+            @keyframes float {
+                0%, 100% { transform: translateY(0px); }
+                50% { transform: translateY(-10px); }
+            }
+            
+            .preview-header {
+                display: flex;
+                gap: 8px;
+            }
+            
+            .preview-dot {
+                width: 12px;
+                height: 12px;
+                border-radius: 50%;
+            }
+            
+            .preview-dot:nth-child(1) { background: var(--coral); }
+            .preview-dot:nth-child(2) { background: var(--solar); }
+            .preview-dot:nth-child(3) { background: var(--teal); }
+            
+            .preview-content {
+                flex: 1;
+                display: grid;
+                grid-template-columns: 2fr 1fr;
+                gap: 16px;
+            }
+            
+            .preview-card {
+                background: rgba(124, 58, 237, 0.1);
+                border-radius: 12px;
+                border: 1px solid rgba(124, 58, 237, 0.15);
+            }
+            
+            .preview-card.large {
+                grid-row: span 2;
+            }
+            
+            /* Features Section */
+            .features {
+                padding: 100px 40px;
+                max-width: 1400px;
+                margin: 0 auto;
+            }
+            
+            .section-header {
                 text-align: center;
-                padding: 30px;
-                color: rgba(255, 255, 255, 0.8);
+                margin-bottom: 60px;
+            }
+            
+            .section-header h2 {
+                font-family: 'Space Grotesk', sans-serif;
+                font-size: 40px;
+                font-weight: 700;
+                margin-bottom: 16px;
+                background: linear-gradient(135deg, var(--text-primary) 0%, var(--lavender) 100%);
+                -webkit-background-clip: text;
+                -webkit-text-fill-color: transparent;
+            }
+            
+            .section-header p {
+                color: var(--text-secondary);
+                font-size: 18px;
+            }
+            
+            .features-grid {
+                display: grid;
+                grid-template-columns: repeat(3, 1fr);
+                gap: 24px;
+            }
+            
+            .feature-card {
+                background: linear-gradient(145deg, var(--cosmic) 0%, rgba(45, 31, 79, 0.5) 100%);
+                border: 1px solid rgba(124, 58, 237, 0.15);
+                border-radius: 20px;
+                padding: 32px;
+                transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+                position: relative;
+                overflow: hidden;
+            }
+            
+            .feature-card::before {
+                content: '';
+                position: absolute;
+                top: 0;
+                left: 0;
+                right: 0;
+                height: 3px;
+                background: linear-gradient(90deg, var(--aurora), var(--coral), var(--teal));
+                opacity: 0;
+                transition: opacity 0.3s;
+            }
+            
+            .feature-card:hover {
+                transform: translateY(-8px);
+                border-color: rgba(124, 58, 237, 0.3);
+                box-shadow: 0 20px 40px rgba(124, 58, 237, 0.2);
+            }
+            
+            .feature-card:hover::before {
+                opacity: 1;
+            }
+            
+            .feature-card.featured {
+                grid-column: span 2;
+                display: grid;
+                grid-template-columns: 1fr 1fr;
+                gap: 32px;
+                align-items: center;
+            }
+            
+            .feature-icon {
+                width: 56px;
+                height: 56px;
+                border-radius: 16px;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                font-size: 28px;
+                margin-bottom: 24px;
+                background: linear-gradient(135deg, rgba(124, 58, 237, 0.2) 0%, rgba(20, 184, 166, 0.1) 100%);
+                border: 1px solid rgba(124, 58, 237, 0.2);
+            }
+            
+            .feature-card h3 {
+                font-family: 'Space Grotesk', sans-serif;
+                font-size: 22px;
+                font-weight: 600;
+                margin-bottom: 12px;
+                color: var(--text-primary);
+            }
+            
+            .feature-card p {
+                color: var(--text-secondary);
+                line-height: 1.7;
+                font-size: 15px;
+            }
+            
+            .feature-stats {
+                display: flex;
+                gap: 32px;
+                margin-top: 24px;
+            }
+            
+            .stat {
+                display: flex;
+                flex-direction: column;
+            }
+            
+            .stat-value {
+                font-family: 'Space Grotesk', sans-serif;
+                font-size: 32px;
+                font-weight: 700;
+                background: linear-gradient(135deg, var(--aurora) 0%, var(--coral) 100%);
+                -webkit-background-clip: text;
+                -webkit-text-fill-color: transparent;
+            }
+            
+            .stat-label {
+                font-size: 13px;
+                color: var(--text-secondary);
+                text-transform: uppercase;
+                letter-spacing: 0.5px;
+            }
+            
+            /* Footer */
+            .footer {
+                border-top: 1px solid rgba(124, 58, 237, 0.1);
+                padding: 40px;
+                text-align: center;
+                color: var(--text-secondary);
+                font-size: 14px;
+            }
+            
+            /* Responsive */
+            @media (max-width: 1024px) {
+                .hero {
+                    grid-template-columns: 1fr;
+                    gap: 60px;
+                    text-align: center;
+                }
+                .hero-content h1 {
+                    font-size: 48px;
+                }
+                .hero-content p {
+                    margin: 0 auto 40px;
+                }
+                .hero-actions {
+                    justify-content: center;
+                }
+                .features-grid {
+                    grid-template-columns: 1fr;
+                }
+                .feature-card.featured {
+                    grid-column: span 1;
+                    grid-template-columns: 1fr;
+                }
+            }
+            
+            @media (max-width: 640px) {
+                .navbar {
+                    padding: 16px 20px;
+                }
+                .navbar-nav {
+                    display: none;
+                }
+                .hero {
+                    padding: 60px 20px;
+                }
+                .hero-content h1 {
+                    font-size: 36px;
+                }
+                .features {
+                    padding: 60px 20px;
+                }
             }
         </style>
     </head>
     <body>
+        <div class="bg-mesh"></div>
+        
         <nav class="navbar">
-            <a href="/" class="navbar-brand">🏢 Corporate Portal</a>
+            <a href="/" class="navbar-brand">Nexus Portal</a>
             <ul class="navbar-nav">
-                <li><a href="/">Home</a></li>
-                <li><a href="/login">Login</a></li>
-                <li><a href="/admin">Admin</a></li>
-                <li><a href="/api">API</a></li>
+                <li><a href="/">Platform</a></li>
+                <li><a href="/login">Access</a></li>
+                <li><a href="/admin">Control</a></li>
+                <li><a href="/api">Developers</a></li>
             </ul>
         </nav>
         
-        <div class="hero">
-            <h1>Welcome to Corporate Portal</h1>
-            <p>Your trusted business management platform</p>
-            <a href="/login" class="btn">Get Started</a>
-            <a href="/admin" class="btn">Admin Access</a>
-        </div>
+        <section class="hero">
+            <div class="hero-content">
+                <h1>Secure Access for <span>Modern Teams</span></h1>
+                <p>Enterprise-grade identity management with intelligent threat detection. Protect your infrastructure without compromising user experience.</p>
+                <div class="hero-actions">
+                    <a href="/login" class="btn btn-primary">Access Portal</a>
+                    <a href="/admin" class="btn btn-secondary">Admin Console</a>
+                </div>
+            </div>
+            <div class="hero-visual">
+                <div class="dashboard-preview">
+                    <div class="preview-header">
+                        <div class="preview-dot"></div>
+                        <div class="preview-dot"></div>
+                        <div class="preview-dot"></div>
+                    </div>
+                    <div class="preview-content">
+                        <div class="preview-card large"></div>
+                        <div class="preview-card"></div>
+                        <div class="preview-card"></div>
+                    </div>
+                </div>
+            </div>
+        </section>
         
-        <div class="features">
-            <div class="feature-card">
-                <h3>🔐 Secure Access</h3>
-                <p>Enterprise-grade security for your business data and applications.</p>
+        <section class="features">
+            <div class="section-header">
+                <h2>Built for Security Teams</h2>
+                <p>Everything you need to monitor, analyze, and respond to threats</p>
             </div>
-            <div class="feature-card">
-                <h3>📊 Analytics</h3>
-                <p>Real-time insights and comprehensive reporting tools.</p>
+            <div class="features-grid">
+                <div class="feature-card featured">
+                    <div>
+                        <div class="feature-icon">🛡️</div>
+                        <h3>Intelligent Threat Detection</h3>
+                        <p>AI-powered analysis identifies suspicious patterns in real-time. Our system learns from every interaction to improve detection accuracy.</p>
+                        <div class="feature-stats">
+                            <div class="stat">
+                                <span class="stat-value">99.9%</span>
+                                <span class="stat-label">Uptime</span>
+                            </div>
+                            <div class="stat">
+                                <span class="stat-value">< 50ms</span>
+                                <span class="stat-label">Response</span>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="preview-card" style="height: 200px;"></div>
+                </div>
+                <div class="feature-card">
+                    <div class="feature-icon">📊</div>
+                    <h3>Real-time Analytics</h3>
+                    <p>Comprehensive dashboards with actionable insights into access patterns and security events.</p>
+                </div>
+                <div class="feature-card">
+                    <div class="feature-icon">⚡</div>
+                    <h3>Instant Response</h3>
+                    <p>Automated countermeasures deploy within seconds of threat detection.</p>
+                </div>
+                <div class="feature-card">
+                    <div class="feature-icon">🔐</div>
+                    <h3>Zero Trust Architecture</h3>
+                    <p>Every request verified, every session monitored, every access logged.</p>
+                </div>
             </div>
-            <div class="feature-card">
-                <h3>⚡ Performance</h3>
-                <p>Lightning-fast response times and reliable uptime.</p>
-            </div>
-        </div>
+        </section>
         
-        <div class="footer">
-            <p>&copy; 2024 Corporate Portal. All rights reserved.</p>
-        </div>
+        <footer class="footer">
+            <p>© 2024 Nexus Portal. Enterprise Security Platform.</p>
+        </footer>
     </body>
     </html>
     """
@@ -231,52 +646,146 @@ def admin():
         <head>
             <meta charset="UTF-8">
             <meta name="viewport" content="width=device-width, initial-scale=1.0">
-            <title>Admin Panel - Access Denied</title>
+            <title>Access Denied — Nexus Admin</title>
+            <link rel="preconnect" href="https://fonts.googleapis.com">
+            <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+            <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Space+Grotesk:wght@600;700&display=swap" rel="stylesheet">
             <style>
                 * { margin: 0; padding: 0; box-sizing: border-box; }
+                
+                :root {
+                    --void: #0D0D12;
+                    --cosmic: #1A1429;
+                    --nebula: #2D1F4F;
+                    --aurora: #7C3AED;
+                    --lavender: #A78BFA;
+                    --coral: #F97066;
+                    --teal: #14B8A6;
+                    --solar: #FBBF24;
+                    --pink: #EC4899;
+                    --text-primary: #F8FAFC;
+                    --text-secondary: #94A3B8;
+                }
+                
                 body {
-                    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-                    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+                    font-family: 'Inter', sans-serif;
+                    background: var(--void);
                     min-height: 100vh;
                     display: flex;
                     align-items: center;
                     justify-content: center;
                     padding: 20px;
+                    position: relative;
+                    overflow: hidden;
                 }
-                .card {
-                    background: white;
-                    padding: 40px;
-                    border-radius: 15px;
-                    box-shadow: 0 20px 60px rgba(0,0,0,0.3);
-                    max-width: 500px;
-                    width: 100%;
+                
+                .orb {
+                    position: absolute;
+                    border-radius: 50%;
+                    filter: blur(80px);
+                    opacity: 0.5;
+                    animation: orbFloat 15s ease-in-out infinite;
+                }
+                
+                .orb-1 { width: 400px; height: 400px; background: var(--aurora); top: -100px; right: -100px; }
+                .orb-2 { width: 300px; height: 300px; background: var(--coral); bottom: -50px; left: -50px; animation-delay: -5s; }
+                
+                @keyframes orbFloat {
+                    0%, 100% { transform: translate(0, 0) scale(1); }
+                    33% { transform: translate(30px, -30px) scale(1.1); }
+                    66% { transform: translate(-20px, 20px) scale(0.9); }
+                }
+                
+                .container {
+                    position: relative;
+                    z-index: 10;
                     text-align: center;
+                    max-width: 420px;
                 }
+                
+                .error-icon {
+                    width: 80px;
+                    height: 80px;
+                    margin: 0 auto 32px;
+                    background: linear-gradient(135deg, rgba(249, 112, 102, 0.1) 0%, rgba(236, 72, 153, 0.1) 100%);
+                    border: 1px solid rgba(249, 112, 102, 0.2);
+                    border-radius: 24px;
+                    display: flex;
+                    align-items: center;
+                    justify-content: center;
+                    font-size: 40px;
+                }
+                
+                .card {
+                    background: linear-gradient(145deg, rgba(26, 20, 41, 0.9) 0%, rgba(45, 31, 79, 0.6) 100%);
+                    backdrop-filter: blur(20px);
+                    border: 1px solid rgba(124, 58, 237, 0.2);
+                    border-radius: 24px;
+                    padding: 48px;
+                    box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
+                }
+                
+                .card h1 {
+                    font-family: 'Space Grotesk', sans-serif;
+                    font-size: 28px;
+                    font-weight: 700;
+                    color: var(--text-primary);
+                    margin-bottom: 16px;
+                }
+                
                 .alert {
-                    background: #fee;
-                    color: #c33;
-                    padding: 15px;
-                    border-radius: 8px;
-                    margin-bottom: 20px;
-                    border: 1px solid #fcc;
+                    background: rgba(249, 112, 102, 0.1);
+                    border: 1px solid rgba(249, 112, 102, 0.3);
+                    color: var(--coral);
+                    padding: 16px;
+                    border-radius: 12px;
+                    margin-bottom: 24px;
+                    font-size: 14px;
                 }
+                
+                .card p {
+                    color: var(--text-secondary);
+                    margin-bottom: 24px;
+                    line-height: 1.6;
+                }
+                
                 .btn {
-                    display: inline-block;
-                    padding: 12px 30px;
-                    background: #667eea;
+                    display: inline-flex;
+                    align-items: center;
+                    gap: 10px;
+                    padding: 16px 32px;
+                    background: linear-gradient(135deg, var(--coral) 0%, var(--pink) 100%);
                     color: white;
                     text-decoration: none;
-                    border-radius: 8px;
-                    margin-top: 20px;
+                    border-radius: 14px;
+                    font-weight: 600;
+                    font-size: 15px;
+                    transition: all 0.3s;
+                    box-shadow: 0 4px 20px rgba(249, 112, 102, 0.3);
+                }
+                
+                .btn:hover {
+                    transform: translateY(-2px);
+                    box-shadow: 0 8px 30px rgba(249, 112, 102, 0.4);
+                }
+                
+                @media (max-width: 480px) {
+                    .card { padding: 32px 24px; }
                 }
             </style>
         </head>
         <body>
-            <div class="card">
-                <h1 style="color: #667eea; margin-bottom: 20px;">🔒 Admin Panel</h1>
-                <div class="alert">Invalid credentials. Access denied.</div>
-                <p>Please contact your system administrator.</p>
-                <a href="/admin" class="btn">Try Again</a>
+            <div class="orb orb-1"></div>
+            <div class="orb orb-2"></div>
+            
+            <div class="container">
+                <div class="error-icon">🚫</div>
+                <div class="card">
+                    <h1>Access Denied</h1>
+                    <div class="alert">Invalid administrator credentials</div>
+                    <p>This incident has been logged. Unauthorized access attempts are monitored and may result in account suspension.</p>
+                    <a href="/admin" class="btn">Return to Login</a>
+                </div>
             </div>
         </body>
         </html>
@@ -289,110 +798,226 @@ def admin():
     <head>
         <meta charset="UTF-8">
         <meta name="viewport" content="width=device-width, initial-scale=1.0">
-        <title>Admin Panel - Corporate Portal</title>
+        <title>Admin Console — Nexus</title>
+        <link rel="preconnect" href="https://fonts.googleapis.com">
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+        <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Space+Grotesk:wght@600;700&display=swap" rel="stylesheet">
         <style>
             * { margin: 0; padding: 0; box-sizing: border-box; }
+            
+            :root {
+                --void: #0D0D12;
+                --cosmic: #1A1429;
+                --nebula: #2D1F4F;
+                --aurora: #7C3AED;
+                --lavender: #A78BFA;
+                --coral: #F97066;
+                --teal: #14B8A6;
+                --solar: #FBBF24;
+                --pink: #EC4899;
+                --text-primary: #F8FAFC;
+                --text-secondary: #94A3B8;
+            }
+            
             body {
-                font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-                background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+                font-family: 'Inter', sans-serif;
+                background: var(--void);
                 min-height: 100vh;
                 display: flex;
                 align-items: center;
                 justify-content: center;
                 padding: 20px;
+                position: relative;
+                overflow: hidden;
             }
-            .navbar {
-                position: fixed;
-                top: 0;
-                left: 0;
-                right: 0;
-                background: rgba(255, 255, 255, 0.95);
-                padding: 15px 30px;
-                box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            
+            .orb {
+                position: absolute;
+                border-radius: 50%;
+                filter: blur(80px);
+                opacity: 0.5;
+                animation: orbFloat 15s ease-in-out infinite;
             }
-            .navbar-brand {
-                font-size: 24px;
-                font-weight: bold;
-                color: #667eea;
-                text-decoration: none;
+            
+            .orb-1 { width: 400px; height: 400px; background: var(--aurora); top: -100px; right: -100px; }
+            .orb-2 { width: 300px; height: 300px; background: var(--teal); bottom: -50px; left: -50px; animation-delay: -5s; }
+            
+            @keyframes orbFloat {
+                0%, 100% { transform: translate(0, 0) scale(1); }
+                33% { transform: translate(30px, -30px) scale(1.1); }
+                66% { transform: translate(-20px, 20px) scale(0.9); }
             }
-            .card {
-                background: white;
-                padding: 40px;
-                border-radius: 15px;
-                box-shadow: 0 20px 60px rgba(0,0,0,0.3);
-                max-width: 450px;
+            
+            .login-container {
+                position: relative;
+                z-index: 10;
                 width: 100%;
-                margin-top: 80px;
+                max-width: 420px;
             }
+            
+            .brand {
+                text-align: center;
+                margin-bottom: 40px;
+            }
+            
+            .brand-logo {
+                font-family: 'Space Grotesk', sans-serif;
+                font-size: 32px;
+                font-weight: 700;
+                background: linear-gradient(135deg, var(--aurora) 0%, var(--teal) 100%);
+                -webkit-background-clip: text;
+                -webkit-text-fill-color: transparent;
+                display: inline-flex;
+                align-items: center;
+                gap: 12px;
+                margin-bottom: 12px;
+            }
+            
+            .brand-logo::before { content: '◆'; font-size: 24px; }
+            
+            .brand-tagline {
+                color: var(--text-secondary);
+                font-size: 15px;
+            }
+            
+            .card {
+                background: linear-gradient(145deg, rgba(26, 20, 41, 0.9) 0%, rgba(45, 31, 79, 0.6) 100%);
+                backdrop-filter: blur(20px);
+                border: 1px solid rgba(124, 58, 237, 0.2);
+                border-radius: 24px;
+                padding: 48px;
+                box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
+            }
+            
             .card h1 {
-                color: #667eea;
-                margin-bottom: 10px;
+                font-family: 'Space Grotesk', sans-serif;
+                font-size: 28px;
+                font-weight: 700;
+                color: var(--text-primary);
+                margin-bottom: 8px;
                 text-align: center;
             }
-            .card p {
-                color: #666;
+            
+            .card-subtitle {
+                color: var(--text-secondary);
                 text-align: center;
-                margin-bottom: 30px;
+                margin-bottom: 32px;
+                font-size: 15px;
             }
-            .form-group {
-                margin-bottom: 20px;
+            
+            .admin-badge {
+                display: inline-flex;
+                align-items: center;
+                gap: 8px;
+                background: rgba(20, 184, 166, 0.1);
+                border: 1px solid rgba(20, 184, 166, 0.3);
+                color: var(--teal);
+                padding: 8px 16px;
+                border-radius: 20px;
+                font-size: 12px;
+                font-weight: 600;
+                text-transform: uppercase;
+                letter-spacing: 0.5px;
+                margin: 0 auto 24px;
+                display: block;
+                width: fit-content;
             }
+            
+            .form-group { margin-bottom: 24px; }
             .form-group label {
                 display: block;
                 margin-bottom: 8px;
                 font-weight: 500;
-                color: #333;
+                color: var(--text-secondary);
+                font-size: 14px;
+                text-transform: uppercase;
+                letter-spacing: 0.5px;
             }
+            
             .form-group input {
                 width: 100%;
-                padding: 12px 15px;
-                border: 2px solid #e0e0e0;
-                border-radius: 8px;
+                padding: 16px 18px;
+                background: rgba(13, 13, 18, 0.6);
+                border: 1px solid rgba(124, 58, 237, 0.2);
+                border-radius: 12px;
                 font-size: 16px;
+                color: var(--text-primary);
+                font-family: 'Inter', sans-serif;
                 transition: all 0.3s;
             }
+            
             .form-group input:focus {
                 outline: none;
-                border-color: #667eea;
-                box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+                border-color: var(--teal);
+                box-shadow: 0 0 0 4px rgba(20, 184, 166, 0.1);
             }
+            
             .btn {
                 width: 100%;
-                padding: 14px;
-                background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+                padding: 18px;
+                background: linear-gradient(135deg, var(--teal) 0%, var(--aurora) 100%);
                 color: white;
                 border: none;
-                border-radius: 8px;
+                border-radius: 14px;
                 font-size: 16px;
                 font-weight: 600;
+                font-family: 'Inter', sans-serif;
                 cursor: pointer;
                 transition: all 0.3s;
+                box-shadow: 0 4px 20px rgba(20, 184, 166, 0.3);
             }
+            
             .btn:hover {
                 transform: translateY(-2px);
-                box-shadow: 0 5px 15px rgba(102, 126, 234, 0.4);
+                box-shadow: 0 8px 30px rgba(20, 184, 166, 0.4);
+            }
+            
+            .back-link {
+                display: block;
+                text-align: center;
+                margin-top: 24px;
+                color: var(--text-secondary);
+                text-decoration: none;
+                font-size: 14px;
+                transition: color 0.3s;
+            }
+            
+            .back-link:hover { color: var(--lavender); }
+            
+            @media (max-width: 480px) {
+                .card { padding: 32px 24px; }
             }
         </style>
     </head>
     <body>
-        <nav class="navbar">
-            <a href="/" class="navbar-brand">🏢 Corporate Portal</a>
-        </nav>
-        <div class="card">
-            <h1>🔒 Admin Panel</h1>
-            <p>Administrator Access Required</p>
-            <form method="POST">
-                <div class="form-group">
-                    <label for="username">Username</label>
-                    <input type="text" id="username" name="username" required autofocus>
-                </div>
-                <div class="form-group">
-                    <label for="password">Password</label>
-                    <input type="password" id="password" name="password" required>
-                </div>
-                <button type="submit" class="btn">Login</button>
-            </form>
+        <div class="orb orb-1"></div>
+        <div class="orb orb-2"></div>
+        
+        <div class="login-container">
+            <div class="brand">
+                <div class="brand-logo">Nexus</div>
+                <div class="brand-tagline">Administrative Console</div>
+            </div>
+            
+            <div class="card">
+                <span class="admin-badge">🔐 Restricted Access</span>
+                <h1>Admin Login</h1>
+                <p class="card-subtitle">Elevated privileges required</p>
+                
+                <form method="POST">
+                    <div class="form-group">
+                        <label for="username">Administrator ID</label>
+                        <input type="text" id="username" name="username" placeholder="admin" required autofocus autocomplete="username">
+                    </div>
+                    <div class="form-group">
+                        <label for="password">Password</label>
+                        <input type="password" id="password" name="password" placeholder="••••••••" required autocomplete="current-password">
+                    </div>
+                    <button type="submit" class="btn">Authenticate</button>
+                </form>
+            </div>
+            
+            <a href="/" class="back-link">← Return to homepage</a>
         </div>
     </body>
     </html>
@@ -414,94 +1039,196 @@ def login():
         <head>
             <meta charset="UTF-8">
             <meta name="viewport" content="width=device-width, initial-scale=1.0">
-            <title>Login - Corporate Portal</title>
+            <title>Access Denied — Nexus</title>
+            <link rel="preconnect" href="https://fonts.googleapis.com">
+            <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+            <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Space+Grotesk:wght@600;700&display=swap" rel="stylesheet">
             <style>
                 * { margin: 0; padding: 0; box-sizing: border-box; }
+                
+                :root {
+                    --void: #0D0D12;
+                    --cosmic: #1A1429;
+                    --nebula: #2D1F4F;
+                    --aurora: #7C3AED;
+                    --lavender: #A78BFA;
+                    --coral: #F97066;
+                    --teal: #14B8A6;
+                    --solar: #FBBF24;
+                    --pink: #EC4899;
+                    --text-primary: #F8FAFC;
+                    --text-secondary: #94A3B8;
+                }
+                
                 body {
-                    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-                    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+                    font-family: 'Inter', sans-serif;
+                    background: var(--void);
                     min-height: 100vh;
                     display: flex;
                     align-items: center;
                     justify-content: center;
                     padding: 20px;
+                    position: relative;
+                    overflow: hidden;
                 }
-                .card {
-                    background: white;
-                    padding: 40px;
-                    border-radius: 15px;
-                    box-shadow: 0 20px 60px rgba(0,0,0,0.3);
-                    max-width: 450px;
+                
+                .orb {
+                    position: absolute;
+                    border-radius: 50%;
+                    filter: blur(80px);
+                    opacity: 0.5;
+                    animation: orbFloat 15s ease-in-out infinite;
+                }
+                
+                .orb-1 { width: 400px; height: 400px; background: var(--aurora); top: -100px; right: -100px; }
+                .orb-2 { width: 300px; height: 300px; background: var(--coral); bottom: -50px; left: -50px; animation-delay: -5s; }
+                
+                @keyframes orbFloat {
+                    0%, 100% { transform: translate(0, 0) scale(1); }
+                    33% { transform: translate(30px, -30px) scale(1.1); }
+                    66% { transform: translate(-20px, 20px) scale(0.9); }
+                }
+                
+                .login-container {
+                    position: relative;
+                    z-index: 10;
                     width: 100%;
+                    max-width: 420px;
                 }
+                
+                .brand {
+                    text-align: center;
+                    margin-bottom: 40px;
+                }
+                
+                .brand-logo {
+                    font-family: 'Space Grotesk', sans-serif;
+                    font-size: 32px;
+                    font-weight: 700;
+                    background: linear-gradient(135deg, var(--aurora) 0%, var(--coral) 100%);
+                    -webkit-background-clip: text;
+                    -webkit-text-fill-color: transparent;
+                    display: inline-flex;
+                    align-items: center;
+                    gap: 12px;
+                    margin-bottom: 12px;
+                }
+                
+                .brand-logo::before { content: '◆'; font-size: 24px; }
+                
+                .card {
+                    background: linear-gradient(145deg, rgba(26, 20, 41, 0.9) 0%, rgba(45, 31, 79, 0.6) 100%);
+                    backdrop-filter: blur(20px);
+                    border: 1px solid rgba(124, 58, 237, 0.2);
+                    border-radius: 24px;
+                    padding: 48px;
+                    box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
+                }
+                
                 .card h1 {
-                    color: #667eea;
-                    margin-bottom: 10px;
+                    font-family: 'Space Grotesk', sans-serif;
+                    font-size: 28px;
+                    font-weight: 700;
+                    color: var(--text-primary);
+                    margin-bottom: 8px;
                     text-align: center;
                 }
+                
                 .alert {
-                    background: #fee;
-                    color: #c33;
-                    padding: 15px;
-                    border-radius: 8px;
-                    margin-bottom: 20px;
-                    border: 1px solid #fcc;
+                    background: rgba(249, 112, 102, 0.1);
+                    border: 1px solid rgba(249, 112, 102, 0.3);
+                    color: var(--coral);
+                    padding: 16px;
+                    border-radius: 12px;
+                    margin-bottom: 24px;
+                    font-size: 14px;
+                    text-align: center;
+                    display: flex;
+                    align-items: center;
+                    justify-content: center;
+                    gap: 10px;
                 }
-                .form-group {
-                    margin-bottom: 20px;
-                }
+                
+                .alert::before { content: '⚠️'; }
+                
+                .form-group { margin-bottom: 24px; }
                 .form-group label {
                     display: block;
                     margin-bottom: 8px;
                     font-weight: 500;
-                    color: #333;
+                    color: var(--text-secondary);
+                    font-size: 14px;
+                    text-transform: uppercase;
+                    letter-spacing: 0.5px;
                 }
+                
                 .form-group input {
                     width: 100%;
-                    padding: 12px 15px;
-                    border: 2px solid #e0e0e0;
-                    border-radius: 8px;
+                    padding: 16px 18px;
+                    background: rgba(13, 13, 18, 0.6);
+                    border: 1px solid rgba(124, 58, 237, 0.2);
+                    border-radius: 12px;
                     font-size: 16px;
+                    color: var(--text-primary);
+                    font-family: 'Inter', sans-serif;
                     transition: all 0.3s;
                 }
+                
                 .form-group input:focus {
                     outline: none;
-                    border-color: #667eea;
-                    box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+                    border-color: var(--aurora);
+                    box-shadow: 0 0 0 4px rgba(124, 58, 237, 0.1);
                 }
+                
                 .btn {
                     width: 100%;
-                    padding: 14px;
-                    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+                    padding: 18px;
+                    background: linear-gradient(135deg, var(--coral) 0%, var(--pink) 100%);
                     color: white;
                     border: none;
-                    border-radius: 8px;
+                    border-radius: 14px;
                     font-size: 16px;
                     font-weight: 600;
+                    font-family: 'Inter', sans-serif;
                     cursor: pointer;
                     transition: all 0.3s;
+                    box-shadow: 0 4px 20px rgba(249, 112, 102, 0.3);
                 }
+                
                 .btn:hover {
                     transform: translateY(-2px);
-                    box-shadow: 0 5px 15px rgba(102, 126, 234, 0.4);
+                    box-shadow: 0 8px 30px rgba(249, 112, 102, 0.4);
+                }
+                
+                @media (max-width: 480px) {
+                    .card { padding: 32px 24px; }
                 }
             </style>
         </head>
         <body>
-            <div class="card">
-                <h1>🔐 Login</h1>
-                <div class="alert">Invalid username or password. Please try again.</div>
-                <form method="POST">
-                    <div class="form-group">
-                        <label for="username">Username</label>
-                        <input type="text" id="username" name="username" required autofocus>
-                    </div>
-                    <div class="form-group">
-                        <label for="password">Password</label>
-                        <input type="password" id="password" name="password" required>
-                    </div>
-                    <button type="submit" class="btn">Login</button>
-                </form>
+            <div class="orb orb-1"></div>
+            <div class="orb orb-2"></div>
+            
+            <div class="login-container">
+                <div class="brand">
+                    <div class="brand-logo">Nexus</div>
+                </div>
+                
+                <div class="card">
+                    <h1>Authentication Failed</h1>
+                    <div class="alert">Invalid credentials. Please verify and try again.</div>
+                    <form method="POST">
+                        <div class="form-group">
+                            <label for="username">Username</label>
+                            <input type="text" id="username" name="username" required autofocus autocomplete="username">
+                        </div>
+                        <div class="form-group">
+                            <label for="password">Password</label>
+                            <input type="password" id="password" name="password" required autocomplete="current-password">
+                        </div>
+                        <button type="submit" class="btn">Try Again</button>
+                    </form>
+                </div>
             </div>
         </body>
         </html>
@@ -514,110 +1241,334 @@ def login():
     <head>
         <meta charset="UTF-8">
         <meta name="viewport" content="width=device-width, initial-scale=1.0">
-        <title>Login - Corporate Portal</title>
+        <title>Access Portal — Nexus</title>
+        <link rel="preconnect" href="https://fonts.googleapis.com">
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+        <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Space+Grotesk:wght@600;700&display=swap" rel="stylesheet">
         <style>
             * { margin: 0; padding: 0; box-sizing: border-box; }
+            
+            :root {
+                --void: #0D0D12;
+                --cosmic: #1A1429;
+                --nebula: #2D1F4F;
+                --aurora: #7C3AED;
+                --lavender: #A78BFA;
+                --coral: #F97066;
+                --teal: #14B8A6;
+                --solar: #FBBF24;
+                --pink: #EC4899;
+                --text-primary: #F8FAFC;
+                --text-secondary: #94A3B8;
+            }
+            
             body {
-                font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-                background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+                font-family: 'Inter', sans-serif;
+                background: var(--void);
                 min-height: 100vh;
                 display: flex;
                 align-items: center;
                 justify-content: center;
                 padding: 20px;
+                position: relative;
+                overflow: hidden;
             }
-            .navbar {
-                position: fixed;
-                top: 0;
-                left: 0;
-                right: 0;
-                background: rgba(255, 255, 255, 0.95);
-                padding: 15px 30px;
-                box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            
+            /* Animated background orbs */
+            .orb {
+                position: absolute;
+                border-radius: 50%;
+                filter: blur(80px);
+                opacity: 0.5;
+                animation: orbFloat 15s ease-in-out infinite;
             }
-            .navbar-brand {
-                font-size: 24px;
-                font-weight: bold;
-                color: #667eea;
-                text-decoration: none;
+            
+            .orb-1 {
+                width: 400px;
+                height: 400px;
+                background: var(--aurora);
+                top: -100px;
+                right: -100px;
+                animation-delay: 0s;
             }
-            .card {
-                background: white;
-                padding: 40px;
-                border-radius: 15px;
-                box-shadow: 0 20px 60px rgba(0,0,0,0.3);
-                max-width: 450px;
+            
+            .orb-2 {
+                width: 300px;
+                height: 300px;
+                background: var(--coral);
+                bottom: -50px;
+                left: -50px;
+                animation-delay: -5s;
+            }
+            
+            .orb-3 {
+                width: 200px;
+                height: 200px;
+                background: var(--teal);
+                top: 50%;
+                left: 30%;
+                animation-delay: -10s;
+            }
+            
+            @keyframes orbFloat {
+                0%, 100% { transform: translate(0, 0) scale(1); }
+                33% { transform: translate(30px, -30px) scale(1.1); }
+                66% { transform: translate(-20px, 20px) scale(0.9); }
+            }
+            
+            .login-container {
+                position: relative;
+                z-index: 10;
                 width: 100%;
-                margin-top: 80px;
+                max-width: 420px;
             }
+            
+            .brand {
+                text-align: center;
+                margin-bottom: 40px;
+            }
+            
+            .brand-logo {
+                font-family: 'Space Grotesk', sans-serif;
+                font-size: 32px;
+                font-weight: 700;
+                background: linear-gradient(135deg, var(--aurora) 0%, var(--coral) 100%);
+                -webkit-background-clip: text;
+                -webkit-text-fill-color: transparent;
+                background-clip: text;
+                display: inline-flex;
+                align-items: center;
+                gap: 12px;
+                margin-bottom: 12px;
+            }
+            
+            .brand-logo::before {
+                content: '◆';
+                font-size: 24px;
+            }
+            
+            .brand-tagline {
+                color: var(--text-secondary);
+                font-size: 15px;
+            }
+            
+            .card {
+                background: linear-gradient(145deg, rgba(26, 20, 41, 0.9) 0%, rgba(45, 31, 79, 0.6) 100%);
+                backdrop-filter: blur(20px);
+                border: 1px solid rgba(124, 58, 237, 0.2);
+                border-radius: 24px;
+                padding: 48px;
+                box-shadow: 
+                    0 25px 50px -12px rgba(0, 0, 0, 0.5),
+                    0 0 0 1px rgba(124, 58, 237, 0.1),
+                    inset 0 1px 0 rgba(255, 255, 255, 0.05);
+            }
+            
             .card h1 {
-                color: #667eea;
-                margin-bottom: 10px;
+                font-family: 'Space Grotesk', sans-serif;
+                font-size: 28px;
+                font-weight: 700;
+                color: var(--text-primary);
+                margin-bottom: 8px;
                 text-align: center;
             }
-            .card p {
-                color: #666;
+            
+            .card-subtitle {
+                color: var(--text-secondary);
                 text-align: center;
-                margin-bottom: 30px;
+                margin-bottom: 32px;
+                font-size: 15px;
             }
+            
             .form-group {
-                margin-bottom: 20px;
+                margin-bottom: 24px;
+                position: relative;
             }
+            
             .form-group label {
                 display: block;
                 margin-bottom: 8px;
                 font-weight: 500;
-                color: #333;
+                color: var(--text-secondary);
+                font-size: 14px;
+                text-transform: uppercase;
+                letter-spacing: 0.5px;
             }
+            
+            .input-wrapper {
+                position: relative;
+            }
+            
+            .input-wrapper::before {
+                content: '';
+                position: absolute;
+                inset: -2px;
+                background: linear-gradient(135deg, var(--aurora), var(--coral));
+                border-radius: 14px;
+                opacity: 0;
+                transition: opacity 0.3s;
+                z-index: -1;
+            }
+            
+            .form-group:focus-within .input-wrapper::before {
+                opacity: 0.5;
+            }
+            
             .form-group input {
                 width: 100%;
-                padding: 12px 15px;
-                border: 2px solid #e0e0e0;
-                border-radius: 8px;
+                padding: 16px 18px;
+                background: rgba(13, 13, 18, 0.6);
+                border: 1px solid rgba(124, 58, 237, 0.2);
+                border-radius: 12px;
                 font-size: 16px;
-                transition: all 0.3s;
+                color: var(--text-primary);
+                font-family: 'Inter', sans-serif;
+                transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
             }
+            
+            .form-group input::placeholder {
+                color: rgba(148, 163, 184, 0.5);
+            }
+            
             .form-group input:focus {
                 outline: none;
-                border-color: #667eea;
-                box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+                border-color: var(--aurora);
+                background: rgba(13, 13, 18, 0.8);
+                box-shadow: 0 0 0 4px rgba(124, 58, 237, 0.1);
             }
+            
             .btn {
                 width: 100%;
-                padding: 14px;
-                background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+                padding: 18px;
+                background: linear-gradient(135deg, var(--coral) 0%, var(--pink) 100%);
                 color: white;
                 border: none;
-                border-radius: 8px;
+                border-radius: 14px;
                 font-size: 16px;
                 font-weight: 600;
+                font-family: 'Inter', sans-serif;
                 cursor: pointer;
-                transition: all 0.3s;
+                transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+                position: relative;
+                overflow: hidden;
+                box-shadow: 0 4px 20px rgba(249, 112, 102, 0.3);
             }
+            
+            .btn::before {
+                content: '';
+                position: absolute;
+                top: 0;
+                left: -100%;
+                width: 100%;
+                height: 100%;
+                background: linear-gradient(90deg, transparent, rgba(255,255,255,0.2), transparent);
+                transition: left 0.5s;
+            }
+            
             .btn:hover {
                 transform: translateY(-2px);
-                box-shadow: 0 5px 15px rgba(102, 126, 234, 0.4);
+                box-shadow: 0 8px 30px rgba(249, 112, 102, 0.4);
+            }
+            
+            .btn:hover::before {
+                left: 100%;
+            }
+            
+            .btn:active {
+                transform: translateY(0);
+            }
+            
+            .security-note {
+                margin-top: 32px;
+                padding: 20px;
+                background: rgba(251, 191, 36, 0.05);
+                border: 1px solid rgba(251, 191, 36, 0.15);
+                border-radius: 12px;
+                text-align: center;
+            }
+            
+            .security-note-icon {
+                font-size: 24px;
+                margin-bottom: 8px;
+            }
+            
+            .security-note strong {
+                display: block;
+                color: var(--solar);
+                font-size: 13px;
+                text-transform: uppercase;
+                letter-spacing: 0.5px;
+                margin-bottom: 4px;
+            }
+            
+            .security-note p {
+                color: var(--text-secondary);
+                font-size: 13px;
+            }
+            
+            .back-link {
+                display: block;
+                text-align: center;
+                margin-top: 24px;
+                color: var(--text-secondary);
+                text-decoration: none;
+                font-size: 14px;
+                transition: color 0.3s;
+            }
+            
+            .back-link:hover {
+                color: var(--lavender);
+            }
+            
+            @media (max-width: 480px) {
+                .card {
+                    padding: 32px 24px;
+                }
+                .brand-logo {
+                    font-size: 28px;
+                }
             }
         </style>
     </head>
     <body>
-        <nav class="navbar">
-            <a href="/" class="navbar-brand">🏢 Corporate Portal</a>
-        </nav>
-        <div class="card">
-            <h1>🔐 Login</h1>
-            <p>Sign in to access your account</p>
-            <form method="POST">
-                <div class="form-group">
-                    <label for="username">Username</label>
-                    <input type="text" id="username" name="username" required autofocus>
+        <div class="orb orb-1"></div>
+        <div class="orb orb-2"></div>
+        <div class="orb orb-3"></div>
+        
+        <div class="login-container">
+            <div class="brand">
+                <div class="brand-logo">Nexus</div>
+                <div class="brand-tagline">Enterprise Access Portal</div>
+            </div>
+            
+            <div class="card">
+                <h1>Welcome Back</h1>
+                <p class="card-subtitle">Enter your credentials to continue</p>
+                
+                <form method="POST">
+                    <div class="form-group">
+                        <label for="username">Username</label>
+                        <div class="input-wrapper">
+                            <input type="text" id="username" name="username" placeholder="Enter your username" required autofocus autocomplete="username">
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label for="password">Password</label>
+                        <div class="input-wrapper">
+                            <input type="password" id="password" name="password" placeholder="Enter your password" required autocomplete="current-password">
+                        </div>
+                    </div>
+                    <button type="submit" class="btn">Access Portal</button>
+                </form>
+                
+                <div class="security-note">
+                    <div class="security-note-icon">🔒</div>
+                    <strong>Secure Connection</strong>
+                    <p>All access attempts are monitored and logged</p>
                 </div>
-                <div class="form-group">
-                    <label for="password">Password</label>
-                    <input type="password" id="password" name="password" required>
-                </div>
-                <button type="submit" class="btn">Login</button>
-            </form>
+            </div>
+            
+            <a href="/" class="back-link">← Return to homepage</a>
         </div>
     </body>
     </html>

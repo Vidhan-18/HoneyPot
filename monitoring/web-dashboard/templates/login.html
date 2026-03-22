@@ -3,9 +3,11 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>HPD Security Dashboard - Login</title>
+<title>Command Center — HPD Security</title>
 
-<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Space+Grotesk:wght@600;700&display=swap" rel="stylesheet">
 
 <style>
 *{
@@ -14,167 +16,355 @@
     box-sizing:border-box;
 }
 
+:root{
+    --void:#0D0D12;
+    --cosmic:#1A1429;
+    --nebula:#2D1F4F;
+    --aurora:#7C3AED;
+    --lavender:#A78BFA;
+    --coral:#F97066;
+    --teal:#14B8A6;
+    --solar:#FBBF24;
+    --pink:#EC4899;
+    --text-primary:#F8FAFC;
+    --text-secondary:#94A3B8;
+}
+
 body{
     font-family:'Inter',sans-serif;
-    background:linear-gradient(135deg,#dbeafe,#e9d5ff);
+    background:var(--void);
     min-height:100vh;
     display:flex;
     align-items:center;
     justify-content:center;
     padding:20px;
+    position:relative;
+    overflow:hidden;
+}
+
+/* Animated background */
+.bg-grid{
+    position:fixed;
+    top:0;
+    left:0;
+    width:100%;
+    height:100%;
+    background-image:
+        linear-gradient(rgba(124,58,237,0.03) 1px,transparent 1px),
+        linear-gradient(90deg,rgba(124,58,237,0.03) 1px,transparent 1px);
+    background-size:50px 50px;
+    z-index:0;
+}
+
+.orb{
+    position:absolute;
+    border-radius:50%;
+    filter:blur(100px);
+    opacity:0.4;
+    animation:orbFloat 20s ease-in-out infinite;
+}
+
+.orb-1{
+    width:500px;
+    height:500px;
+    background:var(--aurora);
+    top:-150px;
+    right:-150px;
+}
+
+.orb-2{
+    width:400px;
+    height:400px;
+    background:var(--coral);
+    bottom:-100px;
+    left:-100px;
+    animation-delay:-7s;
+}
+
+.orb-3{
+    width:300px;
+    height:300px;
+    background:var(--teal);
+    top:50%;
+    left:30%;
+    animation-delay:-14s;
+}
+
+@keyframes orbFloat{
+    0%,100%{transform:translate(0,0) scale(1);}
+    33%{transform:translate(40px,-40px) scale(1.1);}
+    66%{transform:translate(-30px,30px) scale(0.9);}
 }
 
 .login-container{
-    background:#0f172a;
-    padding:50px;
-    border-radius:30px;
-    box-shadow:0 40px 80px rgba(0,0,0,0.25);
+    position:relative;
+    z-index:10;
     width:100%;
-    max-width:450px;
+    max-width:440px;
 }
 
-.logo{
+.brand{
     text-align:center;
     margin-bottom:40px;
 }
 
-.logo h1{
-    color:#60a5fa;
+.brand-icon{
+    width:64px;
+    height:64px;
+    margin:0 auto 20px;
+    background:linear-gradient(135deg,var(--aurora) 0%,var(--coral) 100%);
+    border-radius:20px;
+    display:flex;
+    align-items:center;
+    justify-content:center;
     font-size:32px;
-    margin-bottom:10px;
-    font-weight:700;
+    box-shadow:0 10px 40px rgba(124,58,237,0.3);
+    animation:pulse 3s ease-in-out infinite;
 }
 
-.logo p{
-    color:#94a3b8;
+@keyframes pulse{
+    0%,100%{box-shadow:0 10px 40px rgba(124,58,237,0.3);}
+    50%{box-shadow:0 10px 60px rgba(124,58,237,0.5);}
+}
+
+.brand h1{
+    font-family:'Space Grotesk',sans-serif;
+    font-size:32px;
+    font-weight:700;
+    background:linear-gradient(135deg,var(--text-primary) 0%,var(--lavender) 100%);
+    -webkit-background-clip:text;
+    -webkit-text-fill-color:transparent;
+    background-clip:text;
+    margin-bottom:8px;
+}
+
+.brand p{
+    color:var(--text-secondary);
+    font-size:15px;
+}
+
+.card{
+    background:linear-gradient(145deg,rgba(26,20,41,0.95) 0%,rgba(45,31,79,0.7) 100%);
+    backdrop-filter:blur(20px);
+    border:1px solid rgba(124,58,237,0.2);
+    border-radius:28px;
+    padding:48px;
+    box-shadow:
+        0 25px 50px -12px rgba(0,0,0,0.5),
+        0 0 0 1px rgba(124,58,237,0.1),
+        inset 0 1px 0 rgba(255,255,255,0.05);
+}
+
+.alert{
+    padding:16px;
+    border-radius:14px;
+    margin-bottom:24px;
     font-size:14px;
+    display:flex;
+    align-items:center;
+    gap:12px;
+}
+
+.alert-error{
+    background:rgba(249,112,102,0.1);
+    border:1px solid rgba(249,112,102,0.3);
+    color:#fca5a5;
+}
+
+.alert-info{
+    background:rgba(20,184,166,0.1);
+    border:1px solid rgba(20,184,166,0.3);
+    color:#5eead4;
 }
 
 .form-group{
-    margin-bottom:25px;
+    margin-bottom:24px;
 }
 
 .form-group label{
     display:block;
-    color:#cbd5e1;
+    color:var(--text-secondary);
     margin-bottom:10px;
     font-weight:500;
-    font-size:14px;
+    font-size:13px;
+    text-transform:uppercase;
+    letter-spacing:0.5px;
+}
+
+.input-wrapper{
+    position:relative;
 }
 
 .form-group input{
     width:100%;
-    padding:14px 18px;
-    border:2px solid #334155;
-    border-radius:12px;
+    padding:16px 18px;
+    border:1px solid rgba(124,58,237,0.2);
+    border-radius:14px;
     font-size:16px;
-    background:#1e293b;
-    color:#cbd5e1;
-    transition:all 0.3s;
+    background:rgba(13,13,18,0.6);
+    color:var(--text-primary);
+    font-family:'Inter',sans-serif;
+    transition:all 0.3s cubic-bezier(0.4,0,0.2,1);
+}
+
+.form-group input::placeholder{
+    color:rgba(148,163,184,0.4);
 }
 
 .form-group input:focus{
     outline:none;
-    border-color:#60a5fa;
-    box-shadow:0 0 0 3px rgba(96,165,250,0.1);
+    border-color:var(--aurora);
+    background:rgba(13,13,18,0.8);
+    box-shadow:0 0 0 4px rgba(124,58,237,0.15);
 }
 
 .btn-login{
     width:100%;
-    padding:16px;
-    background:linear-gradient(135deg,#60a5fa,#8b5cf6);
+    padding:18px;
+    background:linear-gradient(135deg,var(--aurora) 0%,var(--pink) 100%);
     color:white;
     border:none;
-    border-radius:12px;
+    border-radius:14px;
     font-size:16px;
     font-weight:600;
+    font-family:'Inter',sans-serif;
     cursor:pointer;
-    transition:all 0.3s;
-    margin-top:10px;
+    transition:all 0.3s cubic-bezier(0.4,0,0.2,1);
+    margin-top:8px;
+    position:relative;
+    overflow:hidden;
+    box-shadow:0 4px 20px rgba(124,58,237,0.3);
+}
+
+.btn-login::before{
+    content:'';
+    position:absolute;
+    top:0;
+    left:-100%;
+    width:100%;
+    height:100%;
+    background:linear-gradient(90deg,transparent,rgba(255,255,255,0.2),transparent);
+    transition:left 0.5s;
 }
 
 .btn-login:hover{
     transform:translateY(-2px);
-    box-shadow:0 10px 20px rgba(96,165,250,0.3);
+    box-shadow:0 8px 30px rgba(124,58,237,0.4);
+}
+
+.btn-login:hover::before{
+    left:100%;
 }
 
 .btn-login:active{
     transform:translateY(0);
 }
 
-.alert{
-    padding:14px;
-    border-radius:12px;
-    margin-bottom:25px;
-    font-size:14px;
-}
-
-.alert-error{
-    background:rgba(239,68,68,0.1);
-    color:#fca5a5;
-    border:1px solid rgba(239,68,68,0.3);
-}
-
-.alert-info{
-    background:rgba(96,165,250,0.1);
-    color:#93c5fd;
-    border:1px solid rgba(96,165,250,0.3);
-}
-
 .security-note{
-    background:rgba(245,158,11,0.1);
-    border:1px solid rgba(245,158,11,0.3);
-    padding:15px;
-    border-radius:12px;
-    margin-top:25px;
-    font-size:12px;
-    color:#fbbf24;
-    line-height:1.6;
+    background:rgba(251,191,36,0.05);
+    border:1px solid rgba(251,191,36,0.15);
+    padding:20px;
+    border-radius:16px;
+    margin-top:28px;
+    text-align:center;
+}
+
+.security-note-icon{
+    font-size:24px;
+    margin-bottom:8px;
 }
 
 .security-note strong{
     display:block;
-    margin-bottom:8px;
-    color:#fcd34d;
+    color:var(--solar);
+    font-size:12px;
+    text-transform:uppercase;
+    letter-spacing:0.5px;
+    margin-bottom:6px;
+}
+
+.security-note p{
+    color:var(--text-secondary);
+    font-size:13px;
+    line-height:1.6;
+}
+
+.version{
+    text-align:center;
+    margin-top:24px;
+    color:var(--text-secondary);
+    font-size:12px;
+    opacity:0.6;
+}
+
+/* Mobile responsiveness */
+@media(max-width:480px){
+    .card{
+        padding:32px 24px;
+        border-radius:24px;
+    }
+    .brand h1{
+        font-size:28px;
+    }
+    .brand-icon{
+        width:56px;
+        height:56px;
+        font-size:28px;
+    }
 }
 </style>
 </head>
 <body>
+    <div class="bg-grid"></div>
+    <div class="orb orb-1"></div>
+    <div class="orb orb-2"></div>
+    <div class="orb orb-3"></div>
+    
     <div class="login-container">
-        <div class="logo">
-            <h1>🚨 HPD Security</h1>
-            <p>Honeypot Platform Dashboard</p>
+        <div class="brand">
+            <div class="brand-icon">🛡️</div>
+            <h1>HPD Security</h1>
+            <p>Threat Intelligence Command Center</p>
         </div>
         
-        {% with messages = get_flashed_messages(with_categories=true) %}
-            {% if messages %}
-                {% for category, message in messages %}
-                    <div class="alert alert-{{ category }}">
-                        {{ message }}
+        <div class="card">
+            {% with messages = get_flashed_messages(with_categories=true) %}
+                {% if messages %}
+                    {% for category, message in messages %}
+                        <div class="alert alert-{{ category }}">
+                            {% if category == 'error' %}⚠️{% else %}ℹ️{% endif %}
+                            {{ message }}
+                        </div>
+                    {% endfor %}
+                {% endif %}
+            {% endwith %}
+            
+            <form method="POST" action="/login">
+                <div class="form-group">
+                    <label for="username">Username</label>
+                    <div class="input-wrapper">
+                        <input type="text" id="username" name="username" placeholder="Enter username" required autofocus autocomplete="username">
                     </div>
-                {% endfor %}
-            {% endif %}
-        {% endwith %}
-        
-        <form method="POST" action="/login">
-            <div class="form-group">
-                <label for="username">Username</label>
-                <input type="text" id="username" name="username" required autofocus>
-            </div>
+                </div>
+                
+                <div class="form-group">
+                    <label for="password">Password</label>
+                    <div class="input-wrapper">
+                        <input type="password" id="password" name="password" placeholder="Enter password" required autocomplete="current-password">
+                    </div>
+                </div>
+                
+                <button type="submit" class="btn-login">Access Command Center</button>
+            </form>
             
-            <div class="form-group">
-                <label for="password">Password</label>
-                <input type="password" id="password" name="password" required>
-            </div>
-            
-            <button type="submit" class="btn-login">Login</button>
-        </form>
-        
-        <div class="security-note">
-            <strong>⚠️ Security Note:</strong>
-            Default credentials: admin / honeypot2024<br>
-            Change these in production environment!
+            <!--<div class="security-note">
+                <div class="security-note-icon">🔐</div>
+                <strong>Security Notice</strong>
+                <p>Default: admin / honeypot2024<br>Change credentials in production</p>
+            </div> -->
         </div>
+        
+        <div class="version">HPD Security Platform v2.0</div>
     </div>
 </body>
 </html>

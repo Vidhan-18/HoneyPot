@@ -417,10 +417,20 @@
             try {
                 // Use new attackers summary API
                 const response = await fetch('/api/attackers-summary');
+                if (!response.ok) {
+                    if (response.status === 401) {
+                        window.location.href = '/login';
+                        return;
+                    }
+                    throw new Error(`Failed to load attackers: ${response.status}`);
+                }
                 const attackersData = await response.json();
                 
                 // Also get individual sessions for details
                 const sessionsResponse = await fetch('/api/sessions?limit=1000');
+                if (!sessionsResponse.ok) {
+                    throw new Error(`Failed to load sessions: ${sessionsResponse.status}`);
+                }
                 allSessions = await sessionsResponse.json();
                 
                 // Use attackers summary data
@@ -435,33 +445,35 @@
                     attacker.lastSeen = null;
                     
                     // Process sessions
-                    attacker.sessions.forEach(session => {
-                        const fullSession = allSessions.find(s => s.session_id === session.session_id || s.file === session.session_id);
-                        if (fullSession) {
-                            if (fullSession.protocol) {
-                                attacker.protocols.add(fullSession.protocol);
+                    if (attacker.sessions) {
+                        attacker.sessions.forEach(session => {
+                            const fullSession = allSessions.find(s => s.session_id === session.session_id || s.file === session.session_id);
+                            if (fullSession) {
+                                if (fullSession.protocol) {
+                                    attacker.protocols.add(fullSession.protocol);
+                                }
+                                if (fullSession.commands) {
+                                    attacker.totalCommands += fullSession.commands.length;
+                                }
+                                if (fullSession.login_attempts) {
+                                    attacker.totalLogins += fullSession.login_attempts.length;
+                                }
+                                if (!attacker.firstSeen || new Date(fullSession.start_time) < new Date(attacker.firstSeen)) {
+                                    attacker.firstSeen = fullSession.start_time;
+                                }
+                                if (!attacker.lastSeen || new Date(fullSession.start_time) > new Date(attacker.lastSeen)) {
+                                    attacker.lastSeen = fullSession.start_time;
+                                }
                             }
-                            if (fullSession.commands) {
-                                attacker.totalCommands += fullSession.commands.length;
-                            }
-                            if (fullSession.login_attempts) {
-                                attacker.totalLogins += fullSession.login_attempts.length;
-                            }
-                            if (!attacker.firstSeen || new Date(fullSession.start_time) < new Date(attacker.firstSeen)) {
-                                attacker.firstSeen = fullSession.start_time;
-                            }
-                            if (!attacker.lastSeen || new Date(fullSession.start_time) > new Date(attacker.lastSeen)) {
-                                attacker.lastSeen = fullSession.start_time;
-                            }
-                        }
-                    });
+                        });
+                    }
                 });
                 
                 renderAttackers();
             } catch (error) {
                 console.error('Error loading attackers:', error);
                 document.getElementById('attackers-container').innerHTML = 
-                    '<div class="empty-state"><p>Error loading attackers. Please try again.</p></div>';
+                    `<div class="empty-state"><p>Error loading attackers: ${error.message}</p></div>`;
             }
         }
         
@@ -634,16 +646,33 @@
         document.getElementById('ip-filter').addEventListener('input', renderAttackers);
         document.getElementById('protocol-filter').addEventListener('change', renderAttackers);
         
-        // Close modal on outside click
+        // Close modal on outside click (mouse and touch)
         window.onclick = function(event) {
             const modal = document.getElementById('modal');
             if (event.target == modal) {
                 closeModal();
             }
-        }
+        };
+        
+        // Close modal on touch devices
+        window.ontouchstart = function(event) {
+            const modal = document.getElementById('modal');
+            if (event.target == modal) {
+                closeModal();
+            }
+        };
+        
+        // Close modal on Escape key
+        document.addEventListener('keydown', function(event) {
+            if (event.key === 'Escape') {
+                closeModal();
+            }
+        });
         
         // Initial load
-        loadAttackers();
+        document.addEventListener('DOMContentLoaded', function() {
+            loadAttackers();
+        });
         
         // Auto-refresh every 30 seconds
         setInterval(loadAttackers, 30000);

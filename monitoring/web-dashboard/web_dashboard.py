@@ -450,6 +450,133 @@ def api_attackers_summary():
         return jsonify({'error': str(e)}), 500
 
 
+@app.route('/api/country/<country_code>')
+@login_required
+def api_country_data(country_code):
+    """Get detailed cybersecurity data for a specific country"""
+    try:
+        time_range = request.args.get('timeRange', '24h')
+        attack_type = request.args.get('attackType', 'all')
+        
+        # Calculate time threshold based on range
+        now = datetime.now()
+        if time_range == '1h':
+            threshold = now - timedelta(hours=1)
+        elif time_range == '7d':
+            threshold = now - timedelta(days=7)
+        elif time_range == '30d':
+            threshold = now - timedelta(days=30)
+        else:  # 24h default
+            threshold = now - timedelta(days=1)
+        
+        # Collect sessions for this country
+        country_sessions = []
+        unique_ips = set()
+        attack_types = {}
+        
+        if SESSIONS_DIR.exists():
+            for session_file in SESSIONS_DIR.glob("*.json"):
+                try:
+                    session = read_json_file(session_file)
+                    if not session:
+                        continue
+                    
+                    location = session.get('location', {})
+                    session_country = location.get('country_code', '') or location.get('country', '')
+                    
+                    if session_country.upper() != country_code.upper():
+                        continue
+                    
+                    # Check time range
+                    start_time = session.get('start_time', '')
+                    if start_time:
+                        try:
+                            session_time = datetime.fromisoformat(start_time.replace('Z', '+00:00'))
+                            if session_time < threshold:
+                                continue
+                        except:
+                            pass
+                    
+                    # Classify attacks
+                    attacks = classify_attack(session)
+                    
+                    # Filter by attack type if specified
+                    if attack_type != 'all':
+                        attacks = [a for a in attacks if attack_type.lower() in (a.get('category', '') + a.get('name', '')).lower()]
+                    
+                    country_sessions.append({
+                        'session_id': session.get('session_id', ''),
+                        'client_ip': session.get('client_ip', 'Unknown'),
+                        'start_time': start_time,
+                        'attacks': attacks,
+                        'commands': session.get('commands', [])
+                    })
+                    
+                    unique_ips.add(session.get('client_ip', 'Unknown'))
+                    
+                    for attack in attacks:
+                        attack_cat = attack.get('category', attack.get('name', 'Unknown'))
+                        attack_types[attack_cat] = attack_types.get(attack_cat, 0) + 1
+                        
+                except Exception as e:
+                    logger.warning(f"Error processing session {session_file}: {e}")
+                    continue
+        
+        # Calculate threat level
+        total_attacks = sum(attack_types.values())
+        if total_attacks > 100:
+            threat_level = 'high'
+        elif total_attacks > 20:
+            threat_level = 'medium'
+        else:
+            threat_level = 'low'
+        
+        # Build response
+        response = {
+            'country': country_code,
+            'countryName': get_country_name(country_code),
+            'totalAttacks': total_attacks,
+            'uniqueIPs': len(unique_ips),
+            'threatLevel': threat_level,
+            'attackTypes': attack_types,
+            'logs': [
+                {
+                    'timestamp': s['start_time'],
+                    'ip': s['client_ip'],
+                    'type': (s['attacks'][0].get('category', s['attacks'][0].get('name', 'Unknown')) if s['attacks'] else 'Reconnaissance')
+                }
+                for s in sorted(country_sessions, key=lambda x: x['start_time'] or '', reverse=True)[:50]
+            ]
+        }
+        
+        return jsonify(response)
+        
+    except Exception as e:
+        logger.error(f"Error in api_country_data: {e}")
+        return jsonify({'error': str(e)}), 500
+
+
+def get_country_name(country_code):
+    """Convert country code to country name"""
+    country_names = {
+        'US': 'United States', 'CN': 'China', 'RU': 'Russia', 'DE': 'Germany',
+        'GB': 'United Kingdom', 'FR': 'France', 'IN': 'India', 'JP': 'Japan',
+        'BR': 'Brazil', 'CA': 'Canada', 'AU': 'Australia', 'KR': 'South Korea',
+        'NL': 'Netherlands', 'IT': 'Italy', 'ES': 'Spain', 'TR': 'Turkey',
+        'PL': 'Poland', 'UA': 'Ukraine', 'VN': 'Vietnam', 'TW': 'Taiwan',
+        'ID': 'Indonesia', 'TH': 'Thailand', 'SG': 'Singapore', 'SE': 'Sweden',
+        'CH': 'Switzerland', 'BE': 'Belgium', 'AT': 'Austria', 'CZ': 'Czech Republic',
+        'RO': 'Romania', 'HU': 'Hungary', 'DK': 'Denmark', 'FI': 'Finland',
+        'NO': 'Norway', 'IE': 'Ireland', 'PT': 'Portugal', 'GR': 'Greece',
+        'IL': 'Israel', 'SA': 'Saudi Arabia', 'AE': 'UAE', 'ZA': 'South Africa',
+        'EG': 'Egypt', 'NG': 'Nigeria', 'KE': 'Kenya', 'MX': 'Mexico',
+        'AR': 'Argentina', 'CL': 'Chile', 'CO': 'Colombia', 'PE': 'Peru',
+        'BD': 'Bangladesh', 'MY': 'Malaysia', 'PH': 'Philippines', 'PK': 'Pakistan',
+        'IR': 'Iran', 'IQ': 'Iraq', 'KZ': 'Kazakhstan', 'UZ': 'Uzbekistan'
+    }
+    return country_names.get(country_code.upper(), country_code)
+
+
 def background_thread():
     """Background thread to emit statistics updates"""
     while True:
