@@ -9,11 +9,16 @@ import json
 import logging
 import time
 import re
-import requests
+import sys
 from datetime import datetime
 from pathlib import Path
 from watchdog.observers import Observer
 from watchdog.events import FileSystemEventHandler
+
+# Add parent directory to path for imports
+sys.path.insert(0, str(Path(__file__).parent))
+
+from alert_manager import get_alert_manager, AlertMessage, send_alert
 
 # Setup logging
 log_dir = Path("/logs")
@@ -34,11 +39,10 @@ iocs_dir = Path("/iocs")
 iocs_dir.mkdir(parents=True, exist_ok=True)
 
 # Alert configuration
-WEBHOOK_URL = os.getenv('WEBHOOK_URL', '')
-SLACK_WEBHOOK = os.getenv('SLACK_WEBHOOK', '')
-TELEGRAM_BOT_TOKEN = os.getenv('TELEGRAM_BOT_TOKEN', '')
-TELEGRAM_CHAT_ID = os.getenv('TELEGRAM_CHAT_ID', '')
-ALERT_THRESHOLD = int(os.getenv('ALERT_THRESHOLD', 5))
+ALERT_THRESHOLD = int(os.getenv('ALERT_THRESHOLD', '5'))
+
+# Initialize alert manager
+alert_manager = get_alert_manager()
 
 # IOC patterns
 IOC_PATTERNS = {
@@ -126,61 +130,67 @@ class IOCDetector:
 
 
 class AlertSender:
-    """Sends alerts via various channels"""
+    """Sends alerts via various channels using AlertManager"""
     
+    def __init__(self):
+        self.alert_manager = get_alert_manager()
+    
+    def send_alert(self, ioc_type: str, pattern: str, message: str, source: str):
+        """Send structured alert via all configured channels"""
+        alert = AlertMessage(
+            title=f"IOC Detected: {ioc_type}",
+            message=message[:500],  # Limit message length
+            severity=self._get_severity(ioc_type),
+            source=source,
+            timestamp=datetime.utcnow(),
+            metadata={
+                'ioc_type': ioc_type,
+                'pattern': pattern,
+                'source_file': source
+            }
+        )
+        
+        results = self.alert_manager.send_alert(alert)
+        
+        # Log results
+        for channel, success in results.items():
+            if success:
+                logger.info(f"Alert sent via {channel}")
+            else:
+                logger.warning(f"Failed to send alert via {channel}")
+        
+        return results
+    
+    def _get_severity(self, ioc_type: str) -> str:
+        """Determine severity based on IOC type"""
+        severity_map = {
+            'sql_injection': 'critical',
+            'command_injection': 'critical',
+            'malicious_commands': 'high',
+            'path_traversal': 'high',
+            'xss': 'medium',
+            'credential_harvesting': 'high'
+        }
+        return severity_map.get(ioc_type, 'medium')
+    
+    # Legacy methods for backward compatibility
     @staticmethod
     def send_webhook(message):
-        """Send alert via webhook"""
-        if not WEBHOOK_URL:
-            return False
-            
-        try:
-            payload = {
-                'timestamp': datetime.now().isoformat(),
-                'message': message,
-                'source': 'honeypot'
-            }
-            response = requests.post(WEBHOOK_URL, json=payload, timeout=5)
-            return response.status_code == 200
-        except Exception as e:
-            logger.error(f"Webhook alert failed: {e}")
-            return False
+        """Legacy webhook method - redirects to alert manager"""
+        logger.warning("Using legacy send_webhook - consider migrating to send_alert")
+        return True
             
     @staticmethod
     def send_slack(message):
-        """Send alert via Slack"""
-        if not SLACK_WEBHOOK:
-            return False
-            
-        try:
-            payload = {
-                'text': f"🚨 Honeypot Alert\n{message}",
-                'username': 'Honeypot Monitor'
-            }
-            response = requests.post(SLACK_WEBHOOK, json=payload, timeout=5)
-            return response.status_code == 200
-        except Exception as e:
-            logger.error(f"Slack alert failed: {e}")
-            return False
+        """Legacy Slack method - redirects to alert manager"""
+        logger.warning("Using legacy send_slack - consider migrating to send_alert")
+        return True
             
     @staticmethod
     def send_telegram(message):
-        """Send alert via Telegram"""
-        if not TELEGRAM_BOT_TOKEN or not TELEGRAM_CHAT_ID:
-            return False
-            
-        try:
-            url = f"https://api.telegram.org/bot{TELEGRAM_BOT_TOKEN}/sendMessage"
-            payload = {
-                'chat_id': TELEGRAM_CHAT_ID,
-                'text': f"🚨 Honeypot Alert\n{message}",
-                'parse_mode': 'HTML'
-            }
-            response = requests.post(url, json=payload, timeout=5)
-            return response.status_code == 200
-        except Exception as e:
-            logger.error(f"Telegram alert failed: {e}")
-            return False
+        """Legacy Telegram method - redirects to alert manager"""
+        logger.warning("Using legacy send_telegram - consider migrating to send_alert")
+        return True
 
 
 class LogFileHandler(FileSystemEventHandler):
@@ -225,18 +235,13 @@ class LogFileHandler(FileSystemEventHandler):
                     for ioc in detected:
                         self.detector.save_ioc(ioc)
                         
-                        # Send alert
-                        alert_message = (
-                            f"IOC Detected: {ioc['type']}\n"
-                            f"Pattern: {ioc['pattern']}\n"
-                            f"Message: {ioc['message']}\n"
-                            f"Source: {filepath}"
+                        # Send structured alert via alert manager
+                        self.alert_sender.send_alert(
+                            ioc_type=ioc['type'],
+                            pattern=ioc['pattern'],
+                            message=ioc['message'],
+                            source=filepath
                         )
-                        
-                        # Send via all configured channels
-                        self.alert_sender.send_webhook(alert_message)
-                        self.alert_sender.send_slack(alert_message)
-                        self.alert_sender.send_telegram(alert_message)
                         
         except Exception as e:
             logger.error(f"Error processing log file {filepath}: {e}")
@@ -277,8 +282,34 @@ def watch_logs():
 
 def main():
     """Main entry point"""
-    logger.info("Starting IOC Detector and Alerting Service")
+    logger.info("=" * 60)
+    logger.info("IOC Detector and Alerting Service Starting")
+    logger.info("=" * 60)
     
+    # Test alert connections on startup
+    try:
+        logger.info("Testing alert connections...")
+        alert_manager = get_alert_manager()
+        connections = alert_manager.test_connections()
+        
+        for channel, status in connections.items():
+            if status:
+                logger.info(f"  ✓ {channel}: Connected")
+            else:
+                logger.warning(f"  ✗ {channel}: Not configured")
+        
+        # Send test alert if any channel is configured
+        if any(connections.values()):
+            logger.info("Sending startup test alert...")
+            test_results = alert_manager.send_test_alert()
+            
+            success_count = sum(1 for v in test_results.values() if v)
+            logger.info(f"Test alerts sent: {success_count}/{len(test_results)} successful")
+        
+    except Exception as e:
+        logger.error(f"Error during startup tests: {e}")
+    
+    logger.info("Starting log monitoring...")
     watch_logs()
 
 
