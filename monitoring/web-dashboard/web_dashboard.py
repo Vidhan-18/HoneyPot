@@ -804,6 +804,70 @@ def api_country_data(country_code):
         return jsonify({'error': str(e)}), 500
 
 
+@app.route('/api/cleanup', methods=['POST'])
+@login_required
+def api_cleanup():
+    """Cleanup data files with partial or full mode"""
+    try:
+        data_payload = request.get_json() or {}
+        mode = data_payload.get('mode', 'partial')
+        
+        import shutil
+        
+        data_dir = Path(__file__).resolve().parent.parent.parent / 'data'
+        
+        def safe_remove_contents(directory):
+            if not directory.exists():
+                return
+            for item in directory.iterdir():
+                try:
+                    if item.is_file():
+                        os.remove(item)
+                    elif item.is_dir():
+                        shutil.rmtree(item)
+                except Exception as e:
+                    logger.warning(f"Failed to remove {item}: {e}")
+
+        if mode == 'partial':
+            # Local data directory targets
+            if data_dir.exists():
+                for target in ['logs', 'sessions', 'iocs']:
+                    target_dir = data_dir / target
+                    safe_remove_contents(target_dir)
+            
+            # Docker paths targets
+            safe_remove_contents(LOGS_DIR)
+            safe_remove_contents(SESSIONS_DIR)
+            safe_remove_contents(IOCS_DIR)
+            
+        elif mode == 'full':
+            if data_dir.exists():
+                for subfolder in data_dir.iterdir():
+                    if subfolder.is_dir():
+                        safe_remove_contents(subfolder)
+            
+            # Docker paths targets
+            safe_remove_contents(LOGS_DIR)
+            safe_remove_contents(SESSIONS_DIR)
+            safe_remove_contents(IOCS_DIR)
+            safe_remove_contents(PCAPS_DIR)
+            
+            # Ensure required folders exist
+            required_folders = ['pcaps', 'logs', 'sessions', 'iocs', 'ssh', 'http', 'db', 'smb-ftp']
+            if data_dir.exists():
+                for folder in required_folders:
+                    try:
+                        (data_dir / folder).mkdir(parents=True, exist_ok=True)
+                    except Exception as e:
+                        logger.warning(f"Failed to create directory {folder}: {e}")
+                        
+        return jsonify({'status': 'success', 'message': f'{mode.capitalize()} cleanup completed successfully'})
+        
+    except Exception as e:
+        logger.error(f"Cleanup error: {e}")
+        return jsonify({'status': 'error', 'message': str(e)}), 500
+
+
 def get_country_name(country_code):
     """Convert country code to country name"""
     country_names = {

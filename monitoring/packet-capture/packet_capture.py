@@ -32,7 +32,7 @@ pcaps_dir.mkdir(parents=True, exist_ok=True)
 
 def start_tcpdump():
     """Start tcpdump to capture packets"""
-    interface = os.getenv('INTERFACE', 'any')
+    interface = os.getenv('INTERFACE', 'enp39s0')
     capture_size = os.getenv('CAPTURE_SIZE', '100M')
     
     # Generate filename with timestamp
@@ -43,40 +43,31 @@ def start_tcpdump():
     
     # Build tcpdump command
     cmd = [
-        'tcpdump',
-        '-i', interface,
-        '-w', str(pcap_file),
-        '-C', '100',  # Rotate files at 100MB
-        '-W', '10',   # Keep 10 files
-        '-U'          # Verbose
+        "tcpdump",
+        "-i", interface,
+        "-nn",
+        "-U",
+        "-w", str(pcap_file)
     ]
     
-    try:
-        process = subprocess.Popen(
-            cmd,
-            stdout=subprocess.PIPE,
-            stderr=subprocess.PIPE,
-            text=True
-        )
-        
-        logger.info(f"tcpdump started with PID {process.pid}")
-        
-        # Monitor process
-        while True:
-            if process.poll() is not None:
-                logger.error("tcpdump process died, restarting...")
-                time.sleep(5)
-                process = subprocess.Popen(
-                    cmd,
-                    stdout=subprocess.PIPE,
-                    stderr=subprocess.PIPE,
-                    text=True
-                )
-            time.sleep(10)
+    while True:
+        try:
+            process = subprocess.Popen(
+                cmd,
+                stdout=subprocess.DEVNULL,
+                stderr=subprocess.PIPE
+            )
             
-    except Exception as e:
-        logger.error(f"Error running tcpdump: {e}")
-        raise
+            stderr = process.communicate()[1]
+            
+            if stderr:
+                print(f"[tcpdump error] {stderr.decode(errors='ignore')}")
+                
+        except Exception as e:
+            print(f"[tcpdump exception] {e}")
+            
+        print("tcpdump process died, restarting...")
+        time.sleep(2)
 
 
 def main():

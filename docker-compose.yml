@@ -128,10 +128,10 @@ services:
     ports:
       - "5000:5000"
     volumes:
-      - ./data/logs:/logs:ro
-      - ./data/sessions:/sessions:ro
+      - ./data/logs:/logs
+      - ./data/sessions:/sessions
       - ./data/iocs:/iocs
-      - ./data/pcaps:/pcaps:ro
+      - ./data/pcaps:/pcaps
     environment:
       - DASHBOARD_PORT=5000
     restart: unless-stopped

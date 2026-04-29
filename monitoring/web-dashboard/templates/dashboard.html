@@ -1430,6 +1430,25 @@ body{
                 </div>
             </div>
         </div>
+
+        <!-- Data Management -->
+        <div class="card" style="margin-top:20px;">
+            <h3>Data Management</h3>
+            <div style="padding: 10px;">
+                <label style="display:block; margin-bottom:15px; color:var(--text-secondary);">Cleanup Data</label>
+                <div style="margin-bottom: 20px; display: flex; flex-direction: column; gap: 10px;">
+                    <label style="cursor: pointer; display: flex; align-items: center; gap: 8px;">
+                        <input type="radio" name="cleanupMode" value="partial" checked>
+                        <span>Partial (Logs, Sessions, IOCs)</span>
+                    </label>
+                    <label style="cursor: pointer; display: flex; align-items: center; gap: 8px; color: var(--coral);">
+                        <input type="radio" name="cleanupMode" value="full">
+                        <span>Full Reset (All data)</span>
+                    </label>
+                </div>
+                <button id="cleanupBtn" onclick="performCleanup()" style="background:linear-gradient(135deg,var(--coral) 0%,var(--pink) 100%); border:none; padding:10px 20px; border-radius:10px; color:white; font-weight:600; cursor:pointer; font-family:'Inter',sans-serif; transition:all 0.3s;">🧹 Clean</button>
+            </div>
+        </div>
     </div>
 
     <!-- THREAT MAP TAB -->
@@ -2882,6 +2901,50 @@ switchTab = function(tabId, button) {
 
 // Auto-refresh every 30 seconds
 setInterval(loadData, 30000);
+
+async function performCleanup() {
+    const mode = document.querySelector('input[name="cleanupMode"]:checked').value;
+    
+    if (mode === 'partial') {
+        if (!confirm('Are you sure you want to clean logs, sessions, and IOCs?')) return;
+    } else {
+        const check = prompt('WARNING: This will delete ALL data including PCAPs.\\nType "DELETE" to confirm:');
+        if (check !== 'DELETE') {
+            showNotification('Full reset cancelled.', 'error');
+            return;
+        }
+    }
+
+    const btn = document.getElementById('cleanupBtn');
+    const originalText = btn.innerHTML;
+    btn.disabled = true;
+    btn.innerHTML = '🧹 Cleaning...';
+    btn.style.opacity = '0.7';
+
+    try {
+        const response = await fetch('/api/cleanup', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ mode })
+        });
+        
+        const data = await response.json();
+        if (data.status === 'success') {
+            showNotification(data.message || 'Cleanup completed', 'success');
+            setTimeout(() => {
+                location.reload();
+            }, 1000);
+        } else {
+            showNotification('Error: ' + (data.message || 'Unknown error'), 'error');
+        }
+    } catch (err) {
+        showNotification('Failed to execute cleanup: ' + err.message, 'error');
+    } finally {
+        btn.disabled = false;
+        btn.innerHTML = originalText;
+        btn.style.opacity = '1';
+    }
+}
 
 // Initial load
 document.addEventListener('DOMContentLoaded', function() {
