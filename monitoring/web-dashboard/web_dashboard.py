@@ -12,7 +12,7 @@ from pathlib import Path
 from flask import Flask, render_template, jsonify, request, session, redirect, url_for, flash
 import secrets
 
-from data_store import get_store, LOGS_DIR, SESSIONS_DIR, IOCS_DIR, PCAPS_DIR, use_supabase
+from .data_store import get_store, LOGS_DIR, SESSIONS_DIR, IOCS_DIR, PCAPS_DIR, use_supabase
 
 # Setup logging first
 logging.basicConfig(
