@@ -117,7 +117,7 @@ services:
       - LOG_LEVEL=INFO
     restart: unless-stopped
 
-  # Sync honeypot files → Supabase (Oracle VM / production)
+  # Sync honeypot files → Supabase (AWS EC2 / production)
   supabase-sync:
     build:
       context: ./monitoring/supabase-sync

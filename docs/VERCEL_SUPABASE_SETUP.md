@@ -1,9 +1,9 @@
-# Vercel + Supabase + Oracle VM Deployment
+# Vercel + Supabase + AWS EC2 Deployment
 
-Architecture **A**: honeypots on **Oracle VM**, dashboard on **Vercel**, data in **Supabase**.
+Architecture **A**: honeypots on **AWS EC2**, dashboard on **Vercel**, data in **Supabase**.
 
 ```
-Attackers → Oracle VM (Docker honeypots)
+Attackers → AWS EC2 (Docker honeypots)
                 ↓ files (/sessions, /logs, …)
             supabase-sync container
                 ↓
@@ -24,7 +24,7 @@ Attackers → Oracle VM (Docker honeypots)
 4. Copy API keys from **Settings → API**:
    - `Project URL` → `SUPABASE_URL`
    - `anon` `public` → `SUPABASE_ANON_KEY` (Vercel + browser)
-   - `service_role` `secret` → `SUPABASE_SERVICE_ROLE_KEY` (Oracle VM sync + Vercel server only)
+   - `service_role` `secret` → `SUPABASE_SERVICE_ROLE_KEY` (AWS EC2 sync + Vercel server only)
 
 Never commit `service_role` to git or expose it in the browser.
 
@@ -75,7 +75,7 @@ Status line meanings:
 
 ---
 
-## 4. Oracle VM (honeypots + sync)
+## 4. AWS EC2 (honeypots + sync)
 
 On the VM:
 
@@ -91,7 +91,7 @@ docker compose --profile supabase up -d supabase-sync
 
 `supabase-sync` watches `./data/sessions`, `./data/logs`, `./data/iocs`, `./data/pcaps` and upserts into Supabase every 15s (configurable via `SUPABASE_SYNC_INTERVAL`).
 
-Open Oracle Cloud **Security Lists** for honeypot ports (2222, 8080, 21, 445, etc.) — only expose what you intend to trap.
+Open AWS Security Groups for honeypot ports (2222, 8080, 21, 445, etc.) — only expose what you intend to trap.
 
 ---
 

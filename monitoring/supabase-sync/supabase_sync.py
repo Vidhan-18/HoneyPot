@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-Sync honeypot files from Oracle VM volumes into Supabase.
+Sync honeypot files from AWS EC2 volumes into Supabase.
 Run alongside docker-compose on the VM (service: supabase-sync).
 """
 

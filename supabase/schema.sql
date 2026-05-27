@@ -46,7 +46,7 @@ create table if not exists public.honeypot_logs (
 create index if not exists idx_honeypot_logs_created_at
   on public.honeypot_logs (created_at desc);
 
--- PCAP metadata (files stay on Oracle VM; store references only)
+-- PCAP metadata (files stay on AWS EC2; store references only)
 create table if not exists public.honeypot_pcaps (
   id uuid primary key default gen_random_uuid(),
   file_name text unique not null,
