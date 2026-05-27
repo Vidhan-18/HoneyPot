@@ -1,283 +1,159 @@
-# 🛡️ Honeypot Defense Platform
+# HoneyPot Defense Platform
 
 [![Docker](https://img.shields.io/badge/Docker-Ready-blue?logo=docker)](https://docker.com)
 [![License](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
-[![Python](https://img.shields.io/badge/Python-3.9+-blue?logo=python)](https://python.org)
+[![Python](https://img.shields.io/badge/Python-3.11+-blue?logo=python)](https://python.org)
 
-A production-ready, multi-service honeypot platform designed to detect, analyze, and alert on cyber attacks in real-time. Features an interactive world map, comprehensive alerting system, and beautiful dark-themed dashboard.
+A multi-service honeypot platform for capturing hostile traffic, classifying attacks, and visualizing activity through a dashboard.
 
-![Dashboard Preview](https://via.placeholder.com/800x400/1a1429/7c3aed?text=Honeypot+Dashboard+Preview)
+## Production Architecture
 
-## ✨ Features
+This repository is configured for:
 
-### 🎯 Honeypot Services
-- **HTTP Honeypot** - Fake corporate portal with login page
-- **SSH Honeypot** - Emulated SSH server capturing brute force attempts
-- **FTP Honeypot** - File transfer protocol honeypot
-- **SMB Honeypot** - Windows file sharing service emulation
-- **Database Honeypot** - MySQL-like database service
+- **AWS EC2** for honeypot services and background workers
+- **Supabase** for centralized storage and realtime updates
+- **Vercel** for hosting the dashboard/API surface
 
-### 🗺️ Interactive Threat Map
-- Real-time world map with attack visualization
-- Heatmap overlay showing attack intensity
-- Country-specific threat intelligence
-- Click-to-explore detailed attack data
-- Time range and attack type filters
-
-### 🚨 Alerting System
-- **Telegram Bot** - Instant mobile notifications
-- **Slack Integration** - Team collaboration alerts
-- **Webhook Support** - Custom integrations (Discord, Teams, etc.)
-- **IOC Detection** - Automatic indicator of compromise identification
-- **Retry Logic** - Reliable delivery with exponential backoff
-
-### 📊 Monitoring & Analytics
-- Real-time session tracking
-- Attack classification and categorization
-- Geographic IP lookup
-- Packet capture (PCAP) support
-- Comprehensive logging
-
-### 🎨 Premium UI
-- Dark theme with glassmorphism design
-- Aurora violet and coral accent colors
-- Responsive layout for all devices
-- Smooth animations and micro-interactions
-- Modern typography (Inter + Space Grotesk)
-
-## 🏗️ Architecture
-
-```
-┌─────────────────────────────────────────────────────────────┐
-│                        ATTACKERS                            │
-└──────────────────────┬──────────────────────────────────────┘
-                       │
-       ┌───────────────┼───────────────┐
-       │               │               │
-       ▼               ▼               ▼
-┌────────────┐  ┌────────────┐  ┌────────────┐
-│   HTTP     │  │    SSH     │  │    FTP     │
-│  :8080     │  │   :2222    │  │   :2121    │
-└─────┬──────┘  └─────┬──────┘  └─────┬──────┘
-      │               │               │
-      └───────────────┼───────────────┘
-                      │
-                      ▼
-┌─────────────────────────────────────────┐
-│         LOG AGGREGATOR                  │
-│    (Collects & normalizes logs)         │
-└─────────────────┬───────────────────────┘
-                  │
-      ┌───────────┼───────────┐
-      │           │           │
-      ▼           ▼           ▼
-┌─────────┐ ┌─────────┐ ┌─────────┐
-│  IOC    │ │  PCAP   │ │   WEB   │
-│ DETECTOR│ │ CAPTURE │ │DASHBOARD│
-└────┬────┘ └─────────┘ └────┬────┘
-     │                        │
-     ▼                        ▼
-┌─────────┐            ┌─────────────┐
-│Telegram │            │  Interactive│
-│  Bot    │            │    Map      │
-└─────────┘            └─────────────┘
+```text
+Attackers -> EC2 Honeypot Services -> log/session files -> supabase-sync -> Supabase
+                                                           -> Vercel dashboard reads + realtime
 ```
 
-## 🚀 Quick Start
+## Core Components
+
+- `services/http` - HTTP trap service
+- `services/ssh` - SSH trap service
+- `services/smb-ftp` - SMB/FTP trap service
+- `services/db-api` - database protocol trap service
+- `monitoring/log-aggregator` - collects and normalizes logs
+- `monitoring/ioc-detector` - IOC detection and alerting
+- `monitoring/packet-capture` - packet capture process
+- `monitoring/web-dashboard` - Flask dashboard and APIs
+- `monitoring/supabase-sync` - syncs EC2 file outputs to Supabase
+
+## Documentation
+
+- Deployment guide: [`docs/VERCEL_SUPABASE_SETUP.md`](docs/VERCEL_SUPABASE_SETUP.md)
+- EC2 runbook: [`docs/EC2_SETUP.md`](docs/EC2_SETUP.md)
+- Alerts setup: [`ALERTS_SETUP.md`](ALERTS_SETUP.md)
+- Safety guidance: [`SAFETY.md`](SAFETY.md)
+- Quick bootstrap: [`QUICKSTART.md`](QUICKSTART.md)
+
+## Quick Start (Local Docker)
 
 ### Prerequisites
-- [Docker](https://docs.docker.com/get-docker/)
-- [Docker Compose](https://docs.docker.com/compose/install/)
 
-### Installation
+- Docker
+- Docker Compose plugin
 
-1. **Clone the repository:**
+### Setup
+
+1. Clone and enter repository:
+
 ```bash
-git clone https://github.com/yourusername/honeypot-platform.git
-cd honeypot-platform
+git clone <your-repo-url>
+cd HoneyPot-main
 ```
 
-2. **Configure environment:**
+2. Configure environment:
+
 ```bash
 cp .env.example .env
-# Edit .env with your settings (see Configuration section)
+# edit .env
 ```
 
-3. **Start the platform:**
-```bash
-docker-compose up -d
-```
-
-4. **Access the dashboard:**
-- Dashboard: http://localhost:5000
-- Default credentials: `admin` / `honeypot2024`
-- Change credentials in `.env` for production!
-
-### Telegram Bot Setup (Optional but Recommended)
-
-1. Message [@BotFather](https://t.me/botfather) on Telegram
-2. Create a new bot with `/newbot`
-3. Copy the bot token to your `.env` file
-4. Get your chat ID by messaging the bot and visiting:
-   ```
-   https://api.telegram.org/bot<YOUR_TOKEN>/getUpdates
-   ```
-5. Add both to `.env`:
-   ```
-   TELEGRAM_BOT_TOKEN=your_token_here
-   TELEGRAM_CHAT_ID=your_chat_id_here
-   ```
-
-## ⚙️ Configuration
-
-### Environment Variables
-
-| Variable | Description | Default |
-|----------|-------------|---------|
-| `TELEGRAM_BOT_TOKEN` | Telegram bot token from @BotFather | - |
-| `TELEGRAM_CHAT_ID` | Your Telegram chat ID | - |
-| `SLACK_WEBHOOK` | Slack incoming webhook URL | - |
-| `WEBHOOK_URL` | Generic webhook endpoint | - |
-| `ADMIN_USERNAME` | Dashboard admin username | admin |
-| `ADMIN_PASSWORD` | Dashboard admin password | honeypot2024 |
-| `ALERT_THRESHOLD` | Events before alerting | 5 |
-
-See `.env.example` for complete configuration options.
-
-### Port Configuration
-
-| Service | Port | Description |
-|---------|------|-------------|
-| Dashboard | 5000 | Web UI and API |
-| HTTP Honeypot | 8080 | Fake corporate portal |
-| SSH Honeypot | 2222 | SSH emulation |
-| FTP Honeypot | 2121 | FTP service |
-| SMB Honeypot | 445 | Windows file sharing |
-| DB Honeypot | 3306 | Database service |
-
-## 📁 Project Structure
-
-```
-honeypot-platform/
-├── .github/
-│   └── workflows/
-│       └── ci.yml              # CI/CD pipeline
-├── data/                       # Data storage (gitignored)
-│   ├── logs/
-│   ├── sessions/
-│   ├── pcaps/
-│   └── iocs/
-├── monitoring/
-│   ├── ioc-detector/          # IOC detection & alerting
-│   │   ├── alert_manager.py   # Centralized alerting
-│   │   ├── ioc_detector.py    # Pattern detection
-│   │   ├── Dockerfile
-│   │   └── requirements.txt
-│   ├── log-aggregator/        # Log collection
-│   ├── packet-capture/        # Network capture
-│   └── web-dashboard/         # Web UI
-│       ├── templates/
-│       │   ├── dashboard.html # Main dashboard
-│       │   └── login.html     # Admin login
-│       ├── web_dashboard.py   # Flask backend
-│       ├── attack_classifier.py
-│       ├── geoip_lookup.py
-│       └── auth.py
-├── services/
-│   ├── http/                  # HTTP honeypot
-│   ├── ssh/                   # SSH honeypot
-│   ├── smb-ftp/              # SMB/FTP honeypot
-│   └── db-api/               # Database honeypot
-├── .env.example              # Environment template
-├── .gitignore               # Git ignore rules
-├── docker-compose.yml       # Docker orchestration
-├── LICENSE                  # MIT License
-└── README.md               # This file
-```
-
-## 🔧 Development
-
-### Running Locally (without Docker)
-
-1. **Create virtual environment:**
-```bash
-python -m venv venv
-source venv/bin/activate  # Linux/Mac
-# or
-venv\Scripts\activate     # Windows
-```
-
-2. **Install dependencies:**
-```bash
-pip install -r monitoring/web-dashboard/requirements.txt
-pip install -r monitoring/ioc-detector/requirements.txt
-```
-
-3. **Run services:**
-```bash
-# Terminal 1 - Dashboard
-python monitoring/web-dashboard/web_dashboard.py
-
-# Terminal 2 - IOC Detector
-python monitoring/ioc-detector/ioc_detector.py
-```
-
-### Testing Alerts
+3. Start core stack:
 
 ```bash
-cd monitoring/ioc-detector
-python alert_manager.py
+docker compose up -d
 ```
 
-This will test all configured alert channels.
+4. Optional: start Supabase sync profile:
 
-## 🔒 Security Considerations
+```bash
+docker compose --profile supabase up -d supabase-sync
+```
 
-⚠️ **IMPORTANT**: This is a honeypot system designed to attract attackers. Follow these guidelines:
+5. Open dashboard:
 
-1. **Network Isolation**: Run in an isolated network segment
-2. **Change Defaults**: Update all default passwords in production
-3. **Legal Compliance**: Ensure deployment complies with local laws
-4. **Data Retention**: Configure log rotation to manage disk space
-5. **Access Control**: Limit dashboard access to authorized personnel
+- `http://localhost:5000`
 
-## 📝 API Documentation
+## Environment and Secrets
 
-### REST Endpoints
+Use `.env.example` as the source of truth.
 
-| Endpoint | Method | Description |
-|----------|--------|-------------|
-| `/api/sessions` | GET | List all sessions |
-| `/api/session/<id>` | GET | Get session details |
-| `/api/stats` | GET | Get statistics |
-| `/api/country/<code>` | GET | Get country threat data |
-| `/api/iocs` | GET | List detected IOCs |
+Minimum production variables:
 
-### WebSocket Events
+- `ENVIRONMENT=production`
+- `SECRET_KEY`
+- `ADMIN_USERNAME`
+- `ADMIN_PASSWORD` or `DASHBOARD_PASSWORD_HASH`
+- `SUPABASE_URL`
+- `SUPABASE_SERVICE_ROLE_KEY`
+- `SUPABASE_ANON_KEY`
 
-| Event | Description |
-|-------|-------------|
-| `connect` | Client connected |
-| `disconnect` | Client disconnected |
-| `new_session` | New attack session |
-| `session_update` | Session data updated |
+Optional alerting variables:
 
-## 🤝 Contributing
+- `TELEGRAM_BOT_TOKEN`, `TELEGRAM_CHAT_ID`
+- `SLACK_WEBHOOK`
+- `WEBHOOK_URL`
 
-1. Fork the repository
-2. Create a feature branch (`git checkout -b feature/amazing-feature`)
-3. Commit changes (`git commit -m 'Add amazing feature'`)
-4. Push to branch (`git push origin feature/amazing-feature`)
-5. Open a Pull Request
+## Security Notes
 
-## 📄 License
+This platform intentionally attracts malicious traffic. Operate it as a controlled, isolated system.
 
-This project is licensed under the MIT License - see [LICENSE](LICENSE) file for details.
+- Do not deploy in the same network segment as production workloads.
+- Restrict SSH admin access by source IP.
+- Rotate credentials and secrets regularly.
+- Keep host OS and container images patched.
+- Review legal requirements before internet exposure.
 
-## 🙏 Acknowledgments
+## Operations
 
-- [Leaflet.js](https://leafletjs.com/) - Interactive maps
-- [Chart.js](https://www.chartjs.org/) - Data visualization
-- [Flask](https://flask.palletsprojects.com/) - Web framework
-- [Socket.IO](https://socket.io/) - Real-time communication
----
+Useful commands:
+
+```bash
+# service state
+docker compose ps
+
+# follow sync logs
+docker logs -f supabase-sync
+
+# follow full stack logs
+docker compose logs -f
+
+# rebuild and restart
+docker compose up -d --build
+docker compose --profile supabase up -d --build supabase-sync
+```
+
+## API Surface
+
+Main read APIs:
+
+- `GET /api/stats`
+- `GET /api/sessions`
+- `GET /api/session/<id-or-file>`
+- `GET /api/iocs`
+- `GET /api/logs`
+- `GET /api/threat-map`
+- `GET /api/country/<country_code>`
+
+Main write APIs:
+
+- `POST /api/block-ip`
+- `POST /api/watchlist-add`
+
+## CI/CD
+
+GitHub Actions workflow in `.github/workflows/ci.yml` handles linting, tests, scanning, and Docker image build workflows.
+
+## Contributing
+
+1. Create a feature branch
+2. Make focused changes with tests where possible
+3. Open a PR with deployment/testing notes
+
+## License
+
+MIT. See [`LICENSE`](LICENSE).
