@@ -3,42 +3,64 @@
 Authentication module for web dashboard
 """
 
-import os
 import hashlib
-import secrets
+import logging
+import os
 from functools import wraps
-from flask import session, redirect, url_for, request, flash
 
-# Default credentials (should be changed in production)
-DEFAULT_USERNAME = os.getenv('DASHBOARD_USERNAME', 'admin')
-DEFAULT_PASSWORD_HASH = os.getenv('DASHBOARD_PASSWORD_HASH', '')
+from flask import flash, redirect, request, session, url_for
 
-# Generate default password hash if not set
-if not DEFAULT_PASSWORD_HASH:
-    # Default password: "honeypot2024" (change this!)
-    DEFAULT_PASSWORD_HASH = hashlib.sha256('honeypot2024'.encode()).hexdigest()
+logger = logging.getLogger(__name__)
 
-def hash_password(password):
-    """Hash a password using SHA256"""
+DEFAULT_USERNAME = os.getenv("ADMIN_USERNAME", os.getenv("DASHBOARD_USERNAME", "admin"))
+DEFAULT_PASSWORD_HASH = os.getenv("DASHBOARD_PASSWORD_HASH", "")
+
+
+def is_production() -> bool:
+    return (
+        os.getenv("VERCEL") == "1"
+        or os.getenv("ENVIRONMENT", "").lower() == "production"
+    )
+
+
+def _resolve_password_hash() -> str:
+    """Prefer DASHBOARD_PASSWORD_HASH, else hash ADMIN_PASSWORD at startup."""
+    if DEFAULT_PASSWORD_HASH:
+        return DEFAULT_PASSWORD_HASH
+    admin_password = os.getenv("ADMIN_PASSWORD", "")
+    if admin_password:
+        return hash_password(admin_password)
+    if is_production():
+        logger.error(
+            "Production requires ADMIN_PASSWORD or DASHBOARD_PASSWORD_HASH. "
+            "Login is disabled until configured."
+        )
+        return ""
+    # Local Docker only — dev default (change via .env)
+    logger.warning("Using dev default password; set ADMIN_PASSWORD for production.")
+    return hash_password("honeypot2024")
+
+
+RESOLVED_PASSWORD_HASH = _resolve_password_hash()
+
+
+def hash_password(password: str) -> str:
     return hashlib.sha256(password.encode()).hexdigest()
 
-def verify_password(username, password):
-    """Verify username and password"""
+
+def verify_password(username: str, password: str) -> bool:
+    if not RESOLVED_PASSWORD_HASH:
+        return False
     if username != DEFAULT_USERNAME:
         return False
-    
-    password_hash = hash_password(password)
-    return password_hash == DEFAULT_PASSWORD_HASH
+    return hash_password(password) == RESOLVED_PASSWORD_HASH
+
 
 def login_required(f):
-    """Decorator to require login"""
     @wraps(f)
     def decorated_function(*args, **kwargs):
-        if 'logged_in' not in session or not session['logged_in']:
-            return redirect(url_for('login'))
+        if "logged_in" not in session or not session["logged_in"]:
+            return redirect(url_for("login"))
         return f(*args, **kwargs)
+
     return decorated_function
-
-
-
-

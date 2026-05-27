@@ -1,0 +1,22 @@
+{
+  "$schema": "https://openapi.vercel.sh/vercel.json",
+  "version": 2,
+  "installCommand": "pip install -r monitoring/web-dashboard/requirements.txt",
+  "builds": [
+    {
+      "src": "monitoring/web-dashboard/web_dashboard.py",
+      "use": "@vercel/python"
+    }
+  ],
+  "routes": [
+    {
+      "src": "/(.*)",
+      "dest": "monitoring/web-dashboard/web_dashboard.py"
+    }
+  ],
+  "env": {
+    "ENVIRONMENT": "production",
+    "VERCEL": "1",
+    "USE_SUPABASE_REALTIME": "true"
+  }
+}

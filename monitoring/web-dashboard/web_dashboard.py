@@ -9,14 +9,10 @@ import json
 import logging
 from datetime import datetime, timedelta
 from pathlib import Path
-from flask import Flask, render_template, jsonify, request, send_file, session, redirect, url_for, flash
-from flask_socketio import SocketIO, emit
-import threading
-import time
+from flask import Flask, render_template, jsonify, request, session, redirect, url_for, flash
 import secrets
 
-# Import mock API
-from mock_api import mock_api
+from data_store import get_store, LOGS_DIR, SESSIONS_DIR, IOCS_DIR, PCAPS_DIR, use_supabase
 
 # Setup logging first
 logging.basicConfig(
@@ -34,7 +30,7 @@ except ImportError as e:
     def login_required(f):
         return f
     def verify_password(username, password):
-        return username == 'admin' and password == 'honeypot2024'
+        return False
     def hash_password(password):
         import hashlib
         return hashlib.sha256(password.encode()).hexdigest()
@@ -61,23 +57,45 @@ template_dir = Path(__file__).parent / 'templates'
 app = Flask(__name__, template_folder=str(template_dir))
 app.config['SECRET_KEY'] = os.getenv('SECRET_KEY', secrets.token_hex(32))
 
-# Register mock API blueprint
-app.register_blueprint(mock_api)
+def _enable_mock_api() -> bool:
+    if os.getenv("ENABLE_MOCK_API", "").lower() == "true":
+        return True
+    if is_production():
+        return False
+    return os.getenv("FLASK_ENV", "").lower() == "development"
 
-socketio = SocketIO(app, cors_allowed_origins="*", ping_timeout=60, ping_interval=25)
 
-# Data directories (mounted from docker-compose volumes)
-LOGS_DIR = Path("/logs")
-SESSIONS_DIR = Path("/sessions")
-IOCS_DIR = Path("/iocs")
-PCAPS_DIR = Path("/pcaps")
+def is_production() -> bool:
+    return (
+        os.getenv("VERCEL") == "1"
+        or os.getenv("ENVIRONMENT", "").lower() == "production"
+    )
 
-# Ensure directories exist
-for dir_path in [LOGS_DIR, SESSIONS_DIR, IOCS_DIR, PCAPS_DIR]:
-    try:
-        dir_path.mkdir(parents=True, exist_ok=True)
-    except OSError as e:
-        logger.warning(f"Could not create directory {dir_path} (it may be read-only): {e}")
+
+if _enable_mock_api():
+    from mock_api import mock_api
+
+    app.register_blueprint(mock_api)
+    logger.info("Mock API enabled (development only)")
+
+# Local filesystem dirs (Docker); Supabase used when env vars set
+if not use_supabase():
+    for dir_path in [LOGS_DIR, SESSIONS_DIR, IOCS_DIR, PCAPS_DIR]:
+        try:
+            dir_path.mkdir(parents=True, exist_ok=True)
+        except OSError as e:
+            logger.warning(f"Could not create directory {dir_path}: {e}")
+
+
+@app.context_processor
+def inject_public_config():
+    return {
+        "supabase_url": os.getenv("SUPABASE_URL", ""),
+        "supabase_anon_key": os.getenv("SUPABASE_ANON_KEY", ""),
+        "use_supabase_realtime": os.getenv("USE_SUPABASE_REALTIME", "true").lower()
+        == "true",
+        "data_backend": "supabase" if use_supabase() else "filesystem",
+    }
 
 
 def get_recent_files(directory, extension=".json", limit=50):
@@ -115,54 +133,37 @@ def read_json_file(file_path):
 
 def get_statistics():
     """Calculate platform statistics"""
-    stats = {
-        'total_sessions': 0,
-        'total_iocs': 0,
-        'total_pcaps': 0,
-        'recent_activity': 0,
-        'services': {
-            'ssh': 0,
-            'http': 0,
-            'db': 0,
-            'smb_ftp': 0
+    return get_store().get_statistics()
+
+
+def enrich_session(session: dict) -> dict:
+    """Add geolocation and attack classification to a session dict."""
+    client_ip = session.get("client_ip", "")
+    if client_ip and not session.get("location"):
+        try:
+            session["location"] = get_ip_location(client_ip)
+        except Exception as e:
+            logger.warning(f"Failed to get location for {client_ip}: {e}")
+            session["location"] = {
+                "country": "Unknown",
+                "city": "Unknown",
+                "isp": "Unknown",
+            }
+    try:
+        attacks = classify_attack(session)
+        session["attacks"] = attacks
+        session["attack_summary"] = get_attack_summary(attacks)
+    except Exception as e:
+        logger.warning(f"Failed to classify attacks: {e}")
+        session["attacks"] = []
+        session["attack_summary"] = {
+            "total": 0,
+            "critical": 0,
+            "high": 0,
+            "medium": 0,
+            "low": 0,
         }
-    }
-    
-    # Count sessions
-    if SESSIONS_DIR.exists():
-        stats['total_sessions'] = len(list(SESSIONS_DIR.glob("*.json")))
-        for session_file in SESSIONS_DIR.glob("*.json"):
-            session = read_json_file(session_file)
-            if session:
-                protocol = session.get('protocol', '')
-                if 'ssh' in session_file.name.lower():
-                    stats['services']['ssh'] += 1
-                elif 'http' in session_file.name.lower():
-                    stats['services']['http'] += 1
-                elif 'postgres' in session_file.name.lower() or 'mysql' in session_file.name.lower():
-                    stats['services']['db'] += 1
-                elif 'smb' in session_file.name.lower() or 'ftp' in session_file.name.lower():
-                    stats['services']['smb_ftp'] += 1
-    
-    # Count IOCs
-    if IOCS_DIR.exists():
-        stats['total_iocs'] = len(list(IOCS_DIR.glob("*.json")))
-    
-    # Count PCAPs
-    if PCAPS_DIR.exists():
-        stats['total_pcaps'] = len(list(PCAPS_DIR.glob("*.pcap")))
-    
-    # Count recent activity (last hour)
-    one_hour_ago = datetime.now() - timedelta(hours=1)
-    if SESSIONS_DIR.exists():
-        for session_file in SESSIONS_DIR.glob("*.json"):
-            try:
-                if datetime.fromtimestamp(session_file.stat().st_mtime) > one_hour_ago:
-                    stats['recent_activity'] += 1
-            except:
-                pass
-    
-    return stats
+    return session
 
 
 @app.route('/login', methods=['GET', 'POST'])
@@ -258,41 +259,8 @@ def api_sessions():
     """Get list of sessions with attack classification and location"""
     try:
         limit = int(request.args.get('limit', 50))
-        sessions = []
-        
-        if SESSIONS_DIR.exists():
-            def safe_mtime(x):
-                try:
-                    return x.stat().st_mtime
-                except OSError:
-                    return 0
-            for session_file in sorted(SESSIONS_DIR.glob("*.json"), key=safe_mtime, reverse=True)[:limit]:
-                session = read_json_file(session_file)
-                if session:
-                    session['file'] = session_file.name
-                    
-                    # Add location info
-                    client_ip = session.get('client_ip', '')
-                    if client_ip:
-                        try:
-                            location = get_ip_location(client_ip)
-                            session['location'] = location
-                        except Exception as e:
-                            logger.warning(f"Failed to get location for {client_ip}: {e}")
-                            session['location'] = {'country': 'Unknown', 'city': 'Unknown', 'isp': 'Unknown'}
-                    
-                    # Classify attacks
-                    try:
-                        attacks = classify_attack(session)
-                        session['attacks'] = attacks
-                        session['attack_summary'] = get_attack_summary(attacks)
-                    except Exception as e:
-                        logger.warning(f"Failed to classify attacks: {e}")
-                        session['attacks'] = []
-                        session['attack_summary'] = {'total': 0, 'critical': 0, 'high': 0, 'medium': 0, 'low': 0}
-                    
-                    sessions.append(session)
-        
+        store = get_store()
+        sessions = [enrich_session(s) for s in store.list_sessions(limit)]
         return jsonify(sessions)
     except Exception as e:
         logger.error(f"Error in api_sessions: {e}")
@@ -303,26 +271,10 @@ def api_sessions():
 @login_required
 def api_session(filename):
     """Get specific session details with location and attack classification"""
-    session_file = SESSIONS_DIR / filename
-    if not session_file.exists():
+    sess = get_store().get_session(filename)
+    if not sess:
         return jsonify({'error': 'Session not found'}), 404
-    
-    session = read_json_file(session_file)
-    if not session:
-        return jsonify({'error': 'Failed to read session'}), 500
-    
-    # Add location info
-    client_ip = session.get('client_ip', '')
-    if client_ip:
-        location = get_ip_location(client_ip)
-        session['location'] = location
-    
-    # Classify attacks
-    attacks = classify_attack(session)
-    session['attacks'] = attacks
-    session['attack_summary'] = get_attack_summary(attacks)
-    
-    return jsonify(session)
+    return jsonify(enrich_session(sess))
 
 
 @app.route('/api/threat-map')
@@ -331,84 +283,80 @@ def api_threat_map():
     """Get threat data for map visualization - uses real session data with geolocation"""
     threats = []
     seen_ips = set()
-    
-    if SESSIONS_DIR.exists():
-        def safe_mtime(x):
+    store = get_store()
+
+    for session in store.iter_sessions_for_map(500):
+        session = enrich_session(session)
+        client_ip = session.get('client_ip', '')
+        session_id = session.get('_id') or session.get('file', '')
+
+        if client_ip.startswith(
+            (
+                '192.168.', '10.', '172.16.', '172.17.', '172.18.', '172.19.',
+                '172.20.', '172.21.', '172.22.', '172.23.', '172.24.', '172.25.',
+                '172.26.', '172.27.', '172.28.', '172.29.', '172.30.', '172.31.',
+                '127.', 'localhost', '::1',
+            )
+        ):
+            continue
+
+        location = session.get('location')
+        if not location:
             try:
-                return x.stat().st_mtime
-            except OSError:
-                return 0
-        for session_file in sorted(SESSIONS_DIR.glob("*.json"), key=safe_mtime, reverse=True)[:500]:
-            session = read_json_file(session_file)
-            if session:
-                client_ip = session.get('client_ip', '')
-                
-                # Skip private/local IPs
-                if client_ip.startswith(('192.168.', '10.', '172.16.', '172.17.', '172.18.', '172.19.', '172.20.', '172.21.', '172.22.', '172.23.', '172.24.', '172.25.', '172.26.', '172.27.', '172.28.', '172.29.', '172.30.', '172.31.', '127.', 'localhost', '::1')):
-                    continue
-                
-                # Get or lookup location
-                location = session.get('location')
-                if not location:
-                    try:
-                        location = get_ip_location(client_ip)
-                    except:
-                        location = {'country': 'Unknown', 'country_code': 'XX', 'city': 'Unknown', 'lat': 0, 'lon': 0, 'isp': 'Unknown'}
-                
-                lat = location.get('lat', 0)
-                lon = location.get('lon', 0)
-                
-                # Skip invalid coordinates
-                if not lat or not lon or lat == 0.0001 or lon == 0.0001:
-                    continue
-                
-                # Get attack info
-                attacks = session.get('attacks', [])
-                attack_summary = session.get('attack_summary', {})
-                service = session.get('service', session.get('type', 'unknown'))
-                method = session.get('method', '')
-                path = session.get('path', '')
-                
-                # Determine attack type
-                attack_type = 'unknown'
-                severity = 'low'
-                
-                if attacks:
-                    attack_type = attacks[0] if isinstance(attacks, list) else str(attacks)
-                elif path:
-                    if '/admin' in path or '/login' in path or '/wp-' in path or '/phpmyadmin' in path:
-                        attack_type = 'brute_force'
-                        severity = 'high'
-                    elif 'SELECT' in str(session.get('data', '')).upper() or 'UNION' in str(session.get('data', '')).upper():
-                        attack_type = 'sql_injection'
-                        severity = 'critical'
-                    elif '<' in str(session.get('data', '')) and '>' in str(session.get('data', '')):
-                        attack_type = 'xss'
-                        severity = 'medium'
-                
-                # Avoid duplicate IPs (aggregate attacks from same IP)
-                ip_key = f"{client_ip}_{attack_type}"
-                if client_ip not in seen_ips:
-                    seen_ips.add(client_ip)
-                    attempts = 1
-                else:
-                    continue  # Skip duplicates
-                
-                threats.append({
-                    'id': session_file.stem,
-                    'ip': client_ip,
-                    'lat': lat,
-                    'lng': lon,
-                    'country': location.get('country_code', 'XX'),
-                    'country_name': location.get('country', 'Unknown'),
-                    'city': location.get('city', 'Unknown'),
-                    'service': service,
-                    'attack_type': attack_type,
-                    'severity': severity,
-                    'timestamp': session.get('timestamp', session_file.stem),
-                    'target': f"{method} {path}" if method else path,
-                    'attempts': attempts + attack_summary.get('total', 0)
-                })
+                location = get_ip_location(client_ip)
+            except Exception:
+                location = {
+                    'country': 'Unknown', 'country_code': 'XX', 'city': 'Unknown',
+                    'lat': 0, 'lon': 0, 'isp': 'Unknown',
+                }
+
+        lat = location.get('lat', 0)
+        lon = location.get('lon', 0)
+        if not lat or not lon or lat == 0.0001 or lon == 0.0001:
+            continue
+
+        attacks = session.get('attacks', [])
+        attack_summary = session.get('attack_summary', {})
+        service = session.get('service', session.get('type', 'unknown'))
+        method = session.get('method', '')
+        path = session.get('path', '')
+
+        attack_type = 'unknown'
+        severity = 'low'
+        if attacks:
+            attack_type = attacks[0] if isinstance(attacks, list) else str(attacks)
+        elif path:
+            if '/admin' in path or '/login' in path or '/wp-' in path or '/phpmyadmin' in path:
+                attack_type = 'brute_force'
+                severity = 'high'
+            elif 'SELECT' in str(session.get('data', '')).upper() or 'UNION' in str(session.get('data', '')).upper():
+                attack_type = 'sql_injection'
+                severity = 'critical'
+            elif '<' in str(session.get('data', '')) and '>' in str(session.get('data', '')):
+                attack_type = 'xss'
+                severity = 'medium'
+
+        if client_ip not in seen_ips:
+            seen_ips.add(client_ip)
+            attempts = 1
+        else:
+            continue
+
+        threats.append({
+            'id': session_id,
+            'ip': client_ip,
+            'lat': lat,
+            'lng': lon,
+            'country': location.get('country_code', 'XX'),
+            'country_name': location.get('country', 'Unknown'),
+            'city': location.get('city', 'Unknown'),
+            'service': service,
+            'attack_type': attack_type,
+            'severity': severity,
+            'timestamp': session.get('timestamp', session.get('start_time', '')),
+            'target': f"{method} {path}" if method else path,
+            'attempts': attempts + attack_summary.get('total', 0),
+        })
     
     # Sort by timestamp (newest first)
     threats.sort(key=lambda x: x.get('timestamp', ''), reverse=True)
@@ -430,27 +378,8 @@ def api_block_ip():
     if not ip:
         return jsonify({'error': 'IP required'}), 400
     
-    # Load existing blocked IPs
-    blocked_file = Path("/iocs/blocked_ips.json")
-    blocked = []
-    if blocked_file.exists():
-        try:
-            blocked = json.loads(blocked_file.read_text())
-        except:
-            blocked = []
-    
-    # Add new IP
-    if ip not in blocked:
-        blocked.append({
-            'ip': ip,
-            'blocked_at': datetime.utcnow().isoformat(),
-            'reason': data.get('reason', 'manual_block')
-        })
-        try:
-            blocked_file.write_text(json.dumps(blocked, indent=2))
-        except:
-            return jsonify({'error': 'Failed to save'}), 500
-    
+    store = get_store()
+    blocked = store.add_blocked_ip(ip, data.get('reason', 'manual_block'))
     return jsonify({'status': 'success', 'blocked_ips': [b['ip'] for b in blocked]})
 
 
@@ -463,53 +392,23 @@ def api_watchlist_add():
     if not ip:
         return jsonify({'error': 'IP required'}), 400
     
-    # Load existing watchlist
-    watchlist_file = Path("/iocs/watchlist.json")
-    watchlist = []
-    if watchlist_file.exists():
-        try:
-            watchlist = json.loads(watchlist_file.read_text())
-        except:
-            watchlist = []
-    
-    # Check if already in watchlist
-    if not any(w['ip'] == ip for w in watchlist):
-        watchlist.append({
-            'ip': ip,
-            'added_at': datetime.utcnow().isoformat(),
-            'reason': data.get('reason', 'manual_watchlist'),
-            'notes': data.get('notes', '')
-        })
-        try:
-            watchlist_file.write_text(json.dumps(watchlist, indent=2))
-        except:
-            return jsonify({'error': 'Failed to save'}), 500
-    
+    store = get_store()
+    watchlist = store.add_watchlist_ip(
+        ip, data.get('reason', 'manual_watchlist'), data.get('notes', '')
+    )
     return jsonify({'status': 'success', 'watchlist': [w['ip'] for w in watchlist]})
 
 
 @app.route('/api/blocked-ips')
 def api_blocked_ips():
     """Get list of blocked IPs"""
-    blocked_file = Path("/iocs/blocked_ips.json")
-    if blocked_file.exists():
-        try:
-            return jsonify({'status': 'success', 'blocked': json.loads(blocked_file.read_text())})
-        except:
-            pass
-    return jsonify({'status': 'success', 'blocked': []})
+    return jsonify({'status': 'success', 'blocked': get_store().list_blocked_ips()})
 
 
 @app.route('/api/watchlist')
 def api_watchlist():
     """Get watchlist"""
-    watchlist_file = Path("/iocs/watchlist.json")
-    if watchlist_file.exists():
-        try:
-            return jsonify({'status': 'success', 'watchlist': json.loads(watchlist_file.read_text())})
-        except:
-            pass
-    return jsonify({'status': 'success', 'watchlist': []})
+    return jsonify({'status': 'success', 'watchlist': get_store().list_watchlist()})
 
 
 @app.route('/api/iocs')
@@ -517,43 +416,16 @@ def api_watchlist():
 def api_iocs():
     """Get list of detected IOCs"""
     limit = int(request.args.get('limit', 50))
-    iocs = []
-    
-    if IOCS_DIR.exists():
-        def safe_mtime(x):
-            try:
-                return x.stat().st_mtime
-            except OSError:
-                return 0
-        for ioc_file in sorted(IOCS_DIR.glob("*.json"), key=safe_mtime, reverse=True)[:limit]:
-            try:
-                content = ioc_file.read_text()
-                ioc = json.loads(content)
-                # Skip if it's a list (like blocked_ips.json or watchlist.json)
-                if isinstance(ioc, list):
-                    continue
-                if isinstance(ioc, dict):
-                    ioc['file'] = ioc_file.name
-                    iocs.append(ioc)
-            except Exception as e:
-                logger.warning(f"Error reading IOC file {ioc_file}: {e}")
-                continue
-    
-    return jsonify(iocs)
+    return jsonify(get_store().list_iocs(limit))
 
 
 @app.route('/api/ioc/<filename>')
 @login_required
 def api_ioc(filename):
     """Get specific IOC details"""
-    ioc_file = IOCS_DIR / filename
-    if not ioc_file.exists():
-        return jsonify({'error': 'IOC not found'}), 404
-    
-    ioc = read_json_file(ioc_file)
+    ioc = get_store().get_ioc(filename)
     if not ioc:
-        return jsonify({'error': 'Failed to read IOC'}), 500
-    
+        return jsonify({'error': 'IOC not found'}), 404
     return jsonify(ioc)
 
 
@@ -563,39 +435,14 @@ def api_logs():
     """Get recent logs"""
     limit = int(request.args.get('limit', 100))
     service = request.args.get('service', '')
-    
-    logs = []
-    log_file = LOGS_DIR / "aggregated.log"
-    
-    if log_file.exists():
-        try:
-            with open(log_file, 'r', encoding='utf-8', errors='ignore') as f:
-                lines = f.readlines()
-                for line in lines[-limit:]:
-                    line = line.strip()
-                    if not line:
-                        continue
-                    
-                    try:
-                        log_entry = json.loads(line)
-                        if service and service.lower() not in log_entry.get('source', '').lower():
-                            continue
-                        logs.append(log_entry)
-                    except:
-                        # If not JSON, treat as plain text
-                        logs.append({'message': line, 'timestamp': datetime.now().isoformat()})
-        except Exception as e:
-            logger.error(f"Error reading logs: {e}")
-    
-    return jsonify(logs[-limit:])
+    return jsonify(get_store().list_logs(limit, service))
 
 
 @app.route('/api/pcaps')
 @login_required
 def api_pcaps():
     """Get list of packet captures"""
-    pcaps = get_recent_files(PCAPS_DIR, ".pcap", 20)
-    return jsonify(pcaps)
+    return jsonify(get_store().list_pcaps(20))
 
 
 @app.route('/api/services')
@@ -628,17 +475,12 @@ def api_attack_categories():
 def api_attackers_summary():
     """Get summary of all attackers with location and attack types"""
     try:
-        if not SESSIONS_DIR.exists():
-            return jsonify([])
-        
         attackers = {}
-        
-        for session_file in SESSIONS_DIR.glob("*.json"):
+        store = get_store()
+
+        for session in store.list_sessions(500):
             try:
-                session = read_json_file(session_file)
-                if not session:
-                    continue
-                
+                session = enrich_session(session)
                 client_ip = session.get('client_ip', 'Unknown')
                 if client_ip == 'Unknown' or not client_ip:
                     continue
@@ -680,7 +522,7 @@ def api_attackers_summary():
                     'attacks': attacks
                 })
             except Exception as e:
-                logger.warning(f"Error processing session {session_file}: {e}")
+                logger.warning(f"Error processing session: {e}")
                 continue
         
         # Convert sets to lists for JSON
@@ -722,53 +564,50 @@ def api_country_data(country_code):
         unique_ips = set()
         attack_types = {}
         
-        if SESSIONS_DIR.exists():
-            for session_file in SESSIONS_DIR.glob("*.json"):
-                try:
-                    session = read_json_file(session_file)
-                    if not session:
-                        continue
-                    
-                    location = session.get('location', {})
-                    session_country = location.get('country_code', '') or location.get('country', '')
-                    
-                    if session_country.upper() != country_code.upper():
-                        continue
-                    
-                    # Check time range
-                    start_time = session.get('start_time', '')
-                    if start_time:
-                        try:
-                            session_time = datetime.fromisoformat(start_time.replace('Z', '+00:00'))
-                            if session_time < threshold:
-                                continue
-                        except:
-                            pass
-                    
-                    # Classify attacks
-                    attacks = classify_attack(session)
-                    
-                    # Filter by attack type if specified
-                    if attack_type != 'all':
-                        attacks = [a for a in attacks if attack_type.lower() in (a.get('category', '') + a.get('name', '')).lower()]
-                    
-                    country_sessions.append({
-                        'session_id': session.get('session_id', ''),
-                        'client_ip': session.get('client_ip', 'Unknown'),
-                        'start_time': start_time,
-                        'attacks': attacks,
-                        'commands': session.get('commands', [])
-                    })
-                    
-                    unique_ips.add(session.get('client_ip', 'Unknown'))
-                    
-                    for attack in attacks:
-                        attack_cat = attack.get('category', attack.get('name', 'Unknown'))
-                        attack_types[attack_cat] = attack_types.get(attack_cat, 0) + 1
-                        
-                except Exception as e:
-                    logger.warning(f"Error processing session {session_file}: {e}")
+        store = get_store()
+        for session in store.list_sessions(1000):
+            try:
+                session = enrich_session(session)
+                location = session.get('location', {})
+                session_country = location.get('country_code', '') or location.get('country', '')
+
+                if session_country.upper() != country_code.upper():
                     continue
+
+                start_time = session.get('start_time', '')
+                if start_time:
+                    try:
+                        session_time = datetime.fromisoformat(start_time.replace('Z', '+00:00'))
+                        if session_time < threshold:
+                            continue
+                    except Exception:
+                        pass
+
+                attacks = classify_attack(session)
+                if attack_type != 'all':
+                    attacks = [
+                        a for a in attacks
+                        if attack_type.lower()
+                        in (a.get('category', '') + a.get('name', '')).lower()
+                    ]
+
+                country_sessions.append({
+                    'session_id': session.get('session_id', ''),
+                    'client_ip': session.get('client_ip', 'Unknown'),
+                    'start_time': start_time,
+                    'attacks': attacks,
+                    'commands': session.get('commands', []),
+                })
+
+                unique_ips.add(session.get('client_ip', 'Unknown'))
+
+                for attack in attacks:
+                    attack_cat = attack.get('category', attack.get('name', 'Unknown'))
+                    attack_types[attack_cat] = attack_types.get(attack_cat, 0) + 1
+
+            except Exception as e:
+                logger.warning(f"Error processing session: {e}")
+                continue
         
         # Calculate threat level
         total_attacks = sum(attack_types.values())
@@ -889,41 +728,12 @@ def get_country_name(country_code):
     return country_names.get(country_code.upper(), country_code)
 
 
-def background_thread():
-    """Background thread to emit statistics updates"""
-    while True:
-        time.sleep(5)  # Update every 5 seconds
-        try:
-            stats = get_statistics()
-            socketio.emit('stats_update', stats)
-        except Exception as e:
-            logger.error(f"Error in background thread: {e}")
-
-
-@socketio.on('connect')
-def handle_connect():
-    """Handle client connection"""
-    logger.info('Client connected')
-    emit('stats_update', get_statistics())
-
-
-@socketio.on('disconnect')
-def handle_disconnect():
-    """Handle client disconnection"""
-    logger.info('Client disconnected')
-
-
 def main():
-    """Main entry point"""
+    """Main entry point (local Docker / dev). On Vercel, the platform imports `app`."""
     port = int(os.getenv('DASHBOARD_PORT', 5000))
-    host = '0.0.0.0'
-    
-    # Start background thread
-    thread = threading.Thread(target=background_thread, daemon=True)
-    thread.start()
-    
-    logger.info(f"Starting Web Dashboard on {host}:{port}")
-    socketio.run(app, host=host, port=port, debug=False, allow_unsafe_werkzeug=True, use_reloader=False)
+    host = os.getenv('DASHBOARD_HOST', '0.0.0.0')
+    logger.info(f"Starting Web Dashboard on {host}:{port} (backend={inject_public_config()['data_backend']})")
+    app.run(host=host, port=port, debug=False)
 
 
 if __name__ == '__main__':

@@ -1,0 +1,2 @@
+supabase==2.10.0
+watchdog==4.0.0

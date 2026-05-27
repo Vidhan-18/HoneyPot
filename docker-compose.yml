@@ -117,6 +117,27 @@ services:
       - LOG_LEVEL=INFO
     restart: unless-stopped
 
+  # Sync honeypot files → Supabase (Oracle VM / production)
+  supabase-sync:
+    build:
+      context: ./monitoring/supabase-sync
+      dockerfile: Dockerfile
+    container_name: supabase-sync
+    networks:
+      - honeypot-network
+    volumes:
+      - ./data/logs:/logs
+      - ./data/sessions:/sessions
+      - ./data/iocs:/iocs
+      - ./data/pcaps:/pcaps
+    environment:
+      - SUPABASE_URL=${SUPABASE_URL:-}
+      - SUPABASE_SERVICE_ROLE_KEY=${SUPABASE_SERVICE_ROLE_KEY:-}
+      - SUPABASE_SYNC_INTERVAL=${SUPABASE_SYNC_INTERVAL:-15}
+    restart: unless-stopped
+    profiles:
+      - supabase
+
   # Web Dashboard
   web-dashboard:
     build:

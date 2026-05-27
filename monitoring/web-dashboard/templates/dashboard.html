@@ -8,7 +8,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Space+Grotesk:wght@600;700&display=swap" rel="stylesheet">
-<script src="https://cdn.socket.io/4.5.4/socket.io.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 
 <!-- Leaflet CSS and JS for Interactive Map -->
@@ -1513,8 +1513,12 @@ body{
 </div>
 
 <script>
-// Socket.IO connection with fallback
-let socket = null;
+// Supabase Realtime (Vercel-compatible) with polling fallback
+const SUPABASE_URL = {{ supabase_url|tojson }};
+const SUPABASE_ANON_KEY = {{ supabase_anon_key|tojson }};
+const USE_SUPABASE_REALTIME = {{ use_supabase_realtime|tojson }};
+let realtimeChannel = null;
+let pollTimer = null;
 let currentTab = 'sessions';
 let sessionsChart = null;
 let attackRatioChart = null;
@@ -1530,46 +1534,62 @@ let heatmapEnabled = true;
 let countryDataCache = {};
 let attackChart = null;
 
-// Initialize Socket.IO with error handling
-try {
-    socket = io({
-        reconnection: true,
-        reconnectionAttempts: 5,
-        reconnectionDelay: 1000,
-        timeout: 10000
-    });
-    
-    // Socket connection events
-    socket.on('connect', () => {
-        console.log('Socket connected, ID:', socket.id);
-        document.getElementById('connection-status').textContent = 'Connected';
-        document.getElementById('connection-status').style.color = '#22c55e';
-        loadData();
-    });
-
-    socket.on('disconnect', (reason) => {
-        console.log('Socket disconnected, reason:', reason);
-        document.getElementById('connection-status').textContent = 'Disconnected';
-        document.getElementById('connection-status').style.color = '#ef4444';
-        if (reason === 'io server disconnect') {
-            socket.connect(); // Controlled manual reconnect if server dropped
+async function refreshStats() {
+    try {
+        const response = await fetch('/api/stats');
+        if (response.ok) {
+            updateStats(await response.json());
         }
-    });
+    } catch (e) {
+        console.warn('Stats refresh failed:', e);
+    }
+}
 
-    socket.on('connect_error', (error) => {
-        console.warn('Socket connection error:', error.message);
-        document.getElementById('connection-status').textContent = 'Connection Error';
-        document.getElementById('connection-status').style.color = '#f59e0b';
-    });
-
-    socket.on('stats_update', (stats) => {
-        updateStats(stats);
-    });
-} catch (e) {
-    console.warn('Socket.IO not available, using polling fallback:', e);
+function startPollingFallback() {
+    if (pollTimer) return;
     document.getElementById('connection-status').textContent = 'Polling Mode';
     document.getElementById('connection-status').style.color = '#f59e0b';
+    pollTimer = setInterval(() => {
+        refreshStats();
+        loadData();
+    }, 5000);
 }
+
+async function initRealtime() {
+    refreshStats();
+    loadData();
+
+    if (!USE_SUPABASE_REALTIME || !SUPABASE_URL || !SUPABASE_ANON_KEY || typeof supabase === 'undefined') {
+        startPollingFallback();
+        return;
+    }
+
+    try {
+        const client = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+        realtimeChannel = client
+            .channel('honeypot-dashboard')
+            .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'honeypot_sessions' }, () => {
+                refreshStats();
+                if (currentTab === 'sessions') loadSessions();
+            })
+            .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'honeypot_logs' }, () => {
+                if (currentTab === 'logs') loadLogs();
+            })
+            .subscribe((status) => {
+                if (status === 'SUBSCRIBED') {
+                    document.getElementById('connection-status').textContent = 'Live (Supabase)';
+                    document.getElementById('connection-status').style.color = '#22c55e';
+                } else if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT') {
+                    startPollingFallback();
+                }
+            });
+    } catch (e) {
+        console.warn('Supabase Realtime unavailable:', e);
+        startPollingFallback();
+    }
+}
+
+document.addEventListener('DOMContentLoaded', initRealtime);
 
 function updateStats(stats) {
     document.getElementById('stat-sessions').textContent = stats.total_sessions || 0;
