@@ -132,9 +132,9 @@ services:
       - ./data/pcaps:/pcaps
       - ./data/iocs:/data/iocs
     environment:
-      - SUPABASE_URL=https://wuedpsijqtvlgfhharqy.supabase.co
-      - SUPABASE_SERVICE_ROLE_KEY=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Ind1ZWRwc2lqcXR2bGdmaGhhcnF5Iiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc3OTg2MzQzNSwiZXhwIjoyMDk1NDM5NDM1fQ.LF1Fy3CEo0JeLrV5jpjAYnH1rEwNmLhc03tF-VZa4uc
-      - SUPABASE_SYNC_INTERVAL=60
+      - SUPABASE_URL=${SUPABASE_URL:-}
+      - SUPABASE_SERVICE_ROLE_KEY=${SUPABASE_SERVICE_ROLE_KEY:-}
+      - SUPABASE_SYNC_INTERVAL=${SUPABASE_SYNC_INTERVAL:-15}
       - IOCS_DIR=/data/iocs
     restart: unless-stopped
     profiles:
@@ -157,10 +157,6 @@ services:
       - ./data/pcaps:/pcaps
     environment:
       - DASHBOARD_PORT=5000
-      - SUPABASE_URL=https://wuedpsijqtvlgfhharqy.supabase.co
-      - SUPABASE_SERVICE_ROLE_KEY=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Ind1ZWRwc2lqcXR2bGdmaGhhcnF5Iiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc3OTg2MzQzNSwiZXhwIjoyMDk1NDM5NDM1fQ.LF1Fy3CEo0JeLrV5jpjAYnH1rEwNmLhc03tF-VZa4uc
-      - SUPABASE_ANON_KEY=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Ind1ZWRwc2lqcXR2bGdmaGhhcnF5Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzk4NjM0MzUsImV4cCI6MjA5NTQzOTQzNX0.UXzCOOdqtcvSzcpy-zeeAJl4RUPA5NrLg6ahuOP0cXU
-      - USE_SUPABASE_REALTIME=true
     restart: unless-stopped
     depends_on:
       - log-aggregator
