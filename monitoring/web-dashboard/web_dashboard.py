@@ -12,7 +12,23 @@ from pathlib import Path
 from flask import Flask, render_template, jsonify, request, session, redirect, url_for, flash
 import secrets
 
-from .data_store import get_store, LOGS_DIR, SESSIONS_DIR, IOCS_DIR, PCAPS_DIR, use_supabase
+try:
+    from .data_store import get_store, LOGS_DIR, SESSIONS_DIR, IOCS_DIR, PCAPS_DIR, use_supabase
+    from .storage_manager import (
+        StorageBusyError,
+        StorageConsistencyError,
+        StorageManager,
+        StorageValidationError,
+    )
+except ImportError:
+    # Docker starts this file as a script; package deployments import it normally.
+    from data_store import get_store, LOGS_DIR, SESSIONS_DIR, IOCS_DIR, PCAPS_DIR, use_supabase
+    from storage_manager import (
+        StorageBusyError,
+        StorageConsistencyError,
+        StorageManager,
+        StorageValidationError,
+    )
 
 # Setup logging first
 logging.basicConfig(
@@ -20,6 +36,7 @@ logging.basicConfig(
     format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
 )
 logger = logging.getLogger(__name__)
+storage_manager = StorageManager()
 
 # Import with error handling
 try:
@@ -643,68 +660,115 @@ def api_country_data(country_code):
         return jsonify({'error': str(e)}), 500
 
 
+def _cleanup_actor():
+    """Return an audit-safe description of the authenticated initiator."""
+    username = session.get("username", "unknown")
+    remote_addr = request.headers.get("X-Forwarded-For", request.remote_addr or "unknown")
+    return f"{username}@{remote_addr.split(',')[0].strip()}"
+
+
+def _cleanup_request_payload(payload, legacy=False):
+    """Normalize modern and legacy cleanup requests without changing old clients."""
+    payload = payload or {}
+    if legacy and "categories" not in payload:
+        mode = payload.get("mode", "partial")
+        if mode == "partial":
+            payload = {**payload, "categories": ["logs", "sessions", "iocs"]}
+        elif mode == "full":
+            payload = {**payload, "categories": ["logs", "pcaps", "sessions", "iocs"]}
+        else:
+            raise StorageValidationError("mode must be 'partial' or 'full'")
+        payload.setdefault("older_than_days", "all")
+        payload.setdefault("archive", False)
+    return payload
+
+
+@app.route('/api/storage', methods=['GET'])
+@login_required
+def api_storage():
+    """Return disk and allowlisted category statistics."""
+    try:
+        return jsonify(storage_manager.storage_stats())
+    except Exception as exc:
+        logger.exception("Storage statistics failed: %s", exc)
+        return jsonify({"status": "error", "message": "Unable to read storage statistics"}), 500
+
+
+@app.route('/api/storage/preview', methods=['POST'])
+@login_required
+def api_storage_preview():
+    """Preview a cleanup operation without changing files or datastore rows."""
+    try:
+        payload = _cleanup_request_payload(request.get_json(silent=True))
+        return jsonify(
+            storage_manager.preview(
+                payload.get("categories"),
+                payload.get("older_than_days", "all"),
+                payload.get("archive", False),
+            )
+        )
+    except StorageValidationError as exc:
+        return jsonify({"status": "error", "message": str(exc)}), 400
+    except Exception as exc:
+        logger.exception("Storage preview failed: %s", exc)
+        return jsonify({"status": "error", "message": "Unable to preview cleanup"}), 500
+
+
+def _execute_cleanup(payload, legacy=False):
+    payload = _cleanup_request_payload(payload, legacy=legacy)
+    result = storage_manager.cleanup(
+        categories=payload.get("categories"),
+        older_than_days=payload.get("older_than_days", "all"),
+        archive=payload.get("archive", False),
+        initiated_by=_cleanup_actor(),
+    )
+    response = result.to_dict()
+    response.update(
+        {
+            "status": "success",
+            "message": (
+                f"Cleanup completed: {result.files_deleted} files removed, "
+                f"{response['freed_human']} freed"
+            ),
+        }
+    )
+    return jsonify(response)
+
+
+@app.route('/api/storage/cleanup', methods=['POST'])
+@login_required
+def api_storage_cleanup():
+    """Delete selected storage categories using a consistency-safe transaction."""
+    try:
+        return _execute_cleanup(request.get_json(silent=True))
+    except StorageValidationError as exc:
+        return jsonify({"status": "error", "message": str(exc)}), 400
+    except StorageBusyError as exc:
+        return jsonify({"status": "error", "message": str(exc)}), 409
+    except StorageConsistencyError as exc:
+        logger.error("Storage consistency cleanup failure: %s", exc)
+        return jsonify({"status": "error", "message": str(exc)}), 502
+    except Exception as exc:
+        logger.exception("Storage cleanup failed: %s", exc)
+        return jsonify({"status": "error", "message": "Cleanup failed safely"}), 500
+
+
 @app.route('/api/cleanup', methods=['POST'])
 @login_required
 def api_cleanup():
-    """Cleanup data files with partial or full mode"""
+    """Backward-compatible cleanup endpoint used by the existing dashboard."""
     try:
-        data_payload = request.get_json() or {}
-        mode = data_payload.get('mode', 'partial')
-        
-        import shutil
-        
-        data_dir = Path(__file__).resolve().parent.parent.parent / 'data'
-        
-        def safe_remove_contents(directory):
-            if not directory.exists():
-                return
-            for item in directory.iterdir():
-                try:
-                    if item.is_file():
-                        os.remove(item)
-                    elif item.is_dir():
-                        shutil.rmtree(item)
-                except Exception as e:
-                    logger.warning(f"Failed to remove {item}: {e}")
-
-        if mode == 'partial':
-            # Local data directory targets
-            if data_dir.exists():
-                for target in ['logs', 'sessions', 'iocs']:
-                    target_dir = data_dir / target
-                    safe_remove_contents(target_dir)
-            
-            # Docker paths targets
-            safe_remove_contents(LOGS_DIR)
-            safe_remove_contents(SESSIONS_DIR)
-            safe_remove_contents(IOCS_DIR)
-            
-        elif mode == 'full':
-            if data_dir.exists():
-                for subfolder in data_dir.iterdir():
-                    if subfolder.is_dir():
-                        safe_remove_contents(subfolder)
-            
-            # Docker paths targets
-            safe_remove_contents(LOGS_DIR)
-            safe_remove_contents(SESSIONS_DIR)
-            safe_remove_contents(IOCS_DIR)
-            safe_remove_contents(PCAPS_DIR)
-            
-            # Ensure required folders exist
-            required_folders = ['pcaps', 'logs', 'sessions', 'iocs', 'ssh', 'http', 'db', 'smb-ftp']
-            if data_dir.exists():
-                for folder in required_folders:
-                    try:
-                        (data_dir / folder).mkdir(parents=True, exist_ok=True)
-                    except Exception as e:
-                        logger.warning(f"Failed to create directory {folder}: {e}")
-                        
-        return jsonify({'status': 'success', 'message': f'{mode.capitalize()} cleanup completed successfully'})
-        
-    except Exception as e:
-        logger.error(f"Cleanup error: {e}")
-        return jsonify({'status': 'error', 'message': str(e)}), 500
+        return _execute_cleanup(request.get_json(silent=True), legacy=True)
+    except StorageValidationError as exc:
+        return jsonify({"status": "error", "message": str(exc)}), 400
+    except StorageBusyError as exc:
+        return jsonify({"status": "error", "message": str(exc)}), 409
+    except StorageConsistencyError as exc:
+        logger.error("Legacy cleanup consistency failure: %s", exc)
+        return jsonify({"status": "error", "message": str(exc)}), 502
+    except Exception as exc:
+        logger.exception("Legacy cleanup failed: %s", exc)
+        return jsonify({"status": "error", "message": "Cleanup failed safely"}), 500
 
 
 def get_country_name(country_code):
