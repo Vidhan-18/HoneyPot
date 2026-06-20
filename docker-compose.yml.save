@@ -1,84 +1,84 @@
 
-services:
+#services:
   # SSH Honeypot
-  ssh-honeypot:
-    build:
-      context: ./services/ssh
-      dockerfile: Dockerfile
-    container_name: ssh-honeypot
-    networks:
-      - honeypot-network
-    ports:
-      - "2222:2222"
-    volumes:
-      - ./data/ssh:/var/log/honeypot
-      - ./data/sessions:/sessions
-    environment:
-      - SSH_PORT=2222
-      - LOG_LEVEL=INFO
-    restart: unless-stopped
-    cap_add:
-      - NET_ADMIN
-      - NET_RAW
+ # ssh-honeypot:
+  #  build:
+   #   context: ./services/ssh
+    #  dockerfile: Dockerfile
+    #container_name: ssh-honeypot
+   # networks:
+    #  - honeypot-network
+   # ports:
+   #   - "2222:2222"
+  #  volumes:
+    #  - ./data/ssh:/var/log/honeypot
+   #   - ./data/sessions:/sessions
+  #  environment:
+ #     - SSH_PORT=2222
+    #  - LOG_LEVEL=INFO
+   # restart: unless-stopped
+    #cap_add:
+   #   - NET_ADMIN
+  #    - NET_RAW
 
   # HTTP Honeypot
-  http-honeypot:
-    build:
-      context: ./services/http
-      dockerfile: Dockerfile
-    container_name: http-honeypot
-    networks:
-      - honeypot-network
-    ports:
-      - "8080:8080"
-    volumes:
-      - ./data/http:/var/log/honeypot
-      - ./data/sessions:/sessions
-    environment:
-      - HTTP_PORT=8080
-      - LOG_LEVEL=INFO
-    restart: unless-stopped
+ # http-honeypot:
+    #build:
+    #  context: ./services/http
+#      dockerfile: Dockerfile
+#    container_name: http-honeypot
+#    networks:
+#      - honeypot-network
+#    ports:
+#      - "8080:8080"
+#    volumes:
+#      - ./data/http:/var/log/honeypot
+#      - ./data/sessions:/sessios
+#    environment:
+#      - HTTP_PORT=8080
+#      - LOG_LEVEL=INFO
+#    restart: unless-stopped
 
   # Database API Honeypot
-  db-api-honeypot:
-    build:
-      context: ./services/db-api
-      dockerfile: Dockerfile
-    container_name: db-api-honeypot
-    networks:
-      - honeypot-network
-    ports:
-      - "5432:5432"
-      - "3306:3306"
-    volumes:
-      - ./data/db:/var/log/honeypot
-      - ./data/sessions:/sessions
-    environment:
-      - POSTGRES_PORT=5432
-      - MYSQL_PORT=3306
-      - LOG_LEVEL=INFO
-    restart: unless-stopped
+#  db-api-honeypot:
+#    build:
+#      context: ./services/db-api
+#      dockerfile: Dockerfile
+#    container_name: db-api-honeypot
+#    networks:
+#      - honeypot-network
+#    ports:
+#      - "5432:5432"
+#      - "3306:3306"
+#    volumes:
+#      - ./data/db:/var/log/honeypot
+#      - ./data/sessions:/sessions
+#    environment:
+#      - POSTGRES_PORT=5432
+#      - MYSQL_PORT=3306
+#      - LOG_LEVEL=INFO
+#    restart: unless-stopped
 
   # SMB/FTP Honeypot
-  smb-ftp-honeypot:
-    build:
-      context: ./services/smb-ftp
-      dockerfile: Dockerfile
-    container_name: smb-ftp-honeypot
-    networks:
-      - honeypot-network
-    ports:
-      - "1445:445"
-      - "21:21"
-      - "139:139"
-    volumes:
-      - ./data/smb-ftp:/var/log/honeypot
-      - ./data/sessions:/sessions
-    environment:
-      - SMB_PORT=445
-      - FTP_PORT=21
-      - LOG_LEVEL=INFO
-    restart: unless-stopped
+ # smb-ftp-honeypot:
+#    build:
+  #    context: ./services/smb-ftp
+#      dockerfile: Dockerfile
+#    container_name: smb-ftp-honeypot
+#    networks:
+#      - honeypot-network
+#    ports:
+#      - "1445:445"
+#      - "21:21"
+#      - "139:139"
+#    volumes:
+#      - ./data/smb-ftp:/var/log/honeypot
+#      - ./data/sessions:/sessions
+#    environment:
+#      - SMB_PORT=445
+#      - FTP_PORT=21
+#      - LOG_LEVEL=INFO
+#    restart: unless-stopped#
 
   # Packet Capture Service
   packet-capture:
@@ -130,12 +130,10 @@ services:
       - ./data/sessions:/sessions
       - ./data/iocs:/iocs
       - ./data/pcaps:/pcaps
-      - ./data/iocs:/data/iocs
     environment:
-      - SUPABASE_URL=https://wuedpsijqtvlgfhharqy.supabase.co
-      - SUPABASE_SERVICE_ROLE_KEY=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Ind1ZWRwc2lqcXR2bGdmaGhhcnF5Iiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc3OTg2MzQzNSwiZXhwIjoyMDk1NDM5NDM1fQ.LF1Fy3CEo0JeLrV5jpjAYnH1rEwNmLhc03tF-VZa4uc
-      - SUPABASE_SYNC_INTERVAL=60
-      - IOCS_DIR=/data/iocs
+      - SUPABASE_URL=${SUPABASE_URL:-}
+      - SUPABASE_SERVICE_ROLE_KEY=${SUPABASE_SERVICE_ROLE_KEY:-}
+      - SUPABASE_SYNC_INTERVAL=${SUPABASE_SYNC_INTERVAL:-15}
     restart: unless-stopped
     profiles:
       - supabase
@@ -157,10 +155,6 @@ services:
       - ./data/pcaps:/pcaps
     environment:
       - DASHBOARD_PORT=5000
-      - SUPABASE_URL=https://wuedpsijqtvlgfhharqy.supabase.co
-      - SUPABASE_SERVICE_ROLE_KEY=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Ind1ZWRwc2lqcXR2bGdmaGhhcnF5Iiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc3OTg2MzQzNSwiZXhwIjoyMDk1NDM5NDM1fQ.LF1Fy3CEo0JeLrV5jpjAYnH1rEwNmLhc03tF-VZa4uc
-      - SUPABASE_ANON_KEY=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Ind1ZWRwc2lqcXR2bGdmaGhhcnF5Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzk4NjM0MzUsImV4cCI6MjA5NTQzOTQzNX0.UXzCOOdqtcvSzcpy-zeeAJl4RUPA5NrLg6ahuOP0cXU
-      - USE_SUPABASE_REALTIME=true
     restart: unless-stopped
     depends_on:
       - log-aggregator
@@ -194,7 +188,7 @@ networks:
     # For maximum isolation, set internal: true and use host network for alerts
     internal: false  # Set to true for complete isolation (alerts won't work)
 
-volumes:
-  honeypot-data:
-    driver: local
+#volumes:
+ # honeypot-data:
+  #  driver: local
 

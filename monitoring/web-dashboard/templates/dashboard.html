@@ -2913,9 +2913,14 @@ switchTab = function(tabId, button) {
             initThreatMap();
             // Delay heatmap update to ensure map container is rendered
             setTimeout(() => {
-                updateThreatMap();
-            }, 300);
-        }, 200);
+                if (threatMap) {
+                    threatMap.invalidateSize();
+                    updateThreatMap();
+                } else{
+                    console.error('Threat Map failed to initialize');
+                }
+            }, 500);
+        }, 300);
     }
 };
 

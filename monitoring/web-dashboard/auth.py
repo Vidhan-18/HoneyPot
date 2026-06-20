@@ -41,11 +41,11 @@ def _resolve_password_hash() -> str:
     return hash_password("honeypot2024")
 
 
-RESOLVED_PASSWORD_HASH = _resolve_password_hash()
-
 
 def hash_password(password: str) -> str:
     return hashlib.sha256(password.encode()).hexdigest()
+
+RESOLVED_PASSWORD_HASH = _resolve_password_hash()
 
 
 def verify_password(username: str, password: str) -> bool:

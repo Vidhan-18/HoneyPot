@@ -12,7 +12,7 @@ from pathlib import Path
 from flask import Flask, render_template, jsonify, request, session, redirect, url_for, flash
 import secrets
 
-from .data_store import get_store, LOGS_DIR, SESSIONS_DIR, IOCS_DIR, PCAPS_DIR, use_supabase
+from data_store import get_store, LOGS_DIR, SESSIONS_DIR, IOCS_DIR, PCAPS_DIR, use_supabase
 
 # Setup logging first
 logging.basicConfig(
@@ -139,7 +139,7 @@ def get_statistics():
 def enrich_session(session: dict) -> dict:
     """Add geolocation and attack classification to a session dict."""
     client_ip = session.get("client_ip", "")
-    if client_ip and not session.get("location"):
+    if (client_ip and (not session.get("location") or session.get("location", {}).get("country") == "Unknown")):
         try:
             session["location"] = get_ip_location(client_ip)
         except Exception as e:
