@@ -23,10 +23,6 @@ def is_production() -> bool:
     )
 
 
-def hash_password(password: str) -> str:
-    return hashlib.sha256(password.encode()).hexdigest()
-
-
 def _resolve_password_hash() -> str:
     """Prefer DASHBOARD_PASSWORD_HASH, else hash ADMIN_PASSWORD at startup."""
     if DEFAULT_PASSWORD_HASH:
@@ -46,6 +42,10 @@ def _resolve_password_hash() -> str:
 
 
 RESOLVED_PASSWORD_HASH = _resolve_password_hash()
+
+
+def hash_password(password: str) -> str:
+    return hashlib.sha256(password.encode()).hexdigest()
 
 
 def verify_password(username: str, password: str) -> bool:
