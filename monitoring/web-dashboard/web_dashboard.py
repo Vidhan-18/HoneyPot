@@ -8,6 +8,7 @@ Dev: python web_dashboard.py
 """
 
 import os
+import sys
 import json
 import logging
 from datetime import datetime, timedelta
@@ -16,6 +17,11 @@ from flask import Flask, render_template, jsonify, request, session, redirect, u
 import secrets
 from collections import defaultdict
 import threading
+
+# Ensure this directory is in the Python path (required for Vercel serverless)
+_dashboard_dir = Path(__file__).parent
+if str(_dashboard_dir) not in sys.path:
+    sys.path.insert(0, str(_dashboard_dir))
 
 from data_store import get_store, LOGS_DIR, SESSIONS_DIR, IOCS_DIR, PCAPS_DIR, use_supabase
 
