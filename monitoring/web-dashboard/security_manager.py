@@ -12,7 +12,7 @@ import hashlib
 from datetime import datetime, timedelta
 from typing import Dict, List, Optional, Set, Tuple
 from dataclasses import dataclass, field
-from collections import defaultdict
+from collections import defaultdict, deque
 from pathlib import Path
 import logging
 import threading
@@ -532,8 +532,8 @@ class SecurityManager:
         self.unauthorized_detector = UnauthorizedAccessDetector()
         self.blocker = IPBlocker()
         
-        # Track all security events
-        self.events: List[SecurityEvent] = []
+        # Track all security events — bounded to 10K to prevent OOM
+        self.events: deque = deque(maxlen=10000)
         self.events_lock = threading.Lock()
     
     def check_request(self, ip_address: str, endpoint: str, method: str,
@@ -662,6 +662,9 @@ class SecurityManager:
         
         with self.events_lock:
             self.events.append(event)
+            # Emergency cleanup if deque maxlen somehow doesn't limit (paranoia guard)
+            if len(self.events) > 11000:
+                self.events = deque(list(self.events)[-10000:], maxlen=10000)
         
         # Also log to standard logger
         log_attack_detected(event_type, details, source_ip)

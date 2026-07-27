@@ -77,9 +77,14 @@ jobs:
         pip install -r monitoring/web-dashboard/requirements.txt
         pip install -r monitoring/ioc-detector/requirements.txt
     
+    - name: Run unit tests
+      run: |
+        python tests/test_auth.py
+        python tests/test_security_manager.py
+    
     - name: Run tests with pytest
       run: |
-        pytest --cov=. --cov-report=xml || echo "No tests found"
+        pytest --cov=. --cov-report=xml || echo "No pytest tests found"
     
     # Fix: Updated codecov action to v4
     - name: Upload coverage to Codecov

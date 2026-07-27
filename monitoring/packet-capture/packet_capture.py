@@ -30,9 +30,27 @@ pcaps_dir = Path("/pcaps")
 pcaps_dir.mkdir(parents=True, exist_ok=True)
 
 
+def detect_default_interface():
+    """Auto-detect the default network interface."""
+    try:
+        result = subprocess.run(
+            ['ip', 'route', 'show', 'default'],
+            capture_output=True, text=True, timeout=5
+        )
+        if result.returncode == 0:
+            parts = result.stdout.split()
+            if 'dev' in parts:
+                idx = parts.index('dev')
+                if idx + 1 < len(parts):
+                    return parts[idx + 1]
+    except Exception:
+        pass
+    return 'any'  # Capture on all interfaces as fallback
+
+
 def start_tcpdump():
     """Start tcpdump to capture packets"""
-    interface = os.getenv('INTERFACE', 'enp39s0')
+    interface = os.getenv('INTERFACE', detect_default_interface())
     capture_size = os.getenv('CAPTURE_SIZE', '100M')
     
     # Generate filename with timestamp

@@ -32,10 +32,10 @@ aggregated_log = log_dir / "aggregated.log"
 
 
 class LogHandler(FileSystemEventHandler):
-    """Handles log file changes"""
+    """Handles log file changes — only reads new lines using seek positions."""
     
     def __init__(self):
-        self.processed_files = set()
+        self.file_positions = {}  # Track read position per file to avoid re-reading old data
         
     def on_modified(self, event):
         """Called when a log file is modified"""
@@ -46,17 +46,25 @@ class LogHandler(FileSystemEventHandler):
             self.process_log_file(event.src_path)
             
     def process_log_file(self, filepath):
-        """Process a log file"""
+        """Process a log file — only reads new lines since last read."""
         try:
-            # Read new lines from log file
+            last_pos = self.file_positions.get(filepath, 0)
+            
             with open(filepath, 'r', encoding='utf-8', errors='ignore') as f:
-                lines = f.readlines()
-                
-            # Append to aggregated log
+                f.seek(last_pos)
+                new_lines = f.readlines()
+                current_pos = f.tell()
+            
+            if not new_lines:
+                return
+            
+            # Update position only after successful read
+            self.file_positions[filepath] = current_pos
+            
+            # Append new lines to aggregated log
             with open(aggregated_log, 'a', encoding='utf-8') as f:
-                for line in lines:
+                for line in new_lines:
                     if line.strip():
-                        # Add metadata
                         log_entry = {
                             'timestamp': datetime.now().isoformat(),
                             'source': filepath,

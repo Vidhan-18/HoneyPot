@@ -1,35 +1,39 @@
 # ============================================
-# Honeypot Platform - Clean Git Ignore
+# Honeypot Platform — .gitignore
 # ============================================
+# Add patterns here for files that must NEVER be committed to GitHub.
+# See docs/DEPLOYMENT_GUIDE.md for more info.
 
-# 🔴 Environment variables (CRITICAL)
+# 🔴 ENVIRONMENT VARIABLES (CRITICAL — contains passwords & API keys)
 .env
 .env.*
 !.env.example
 
-# 🔴 Runtime data (DO NOT COMMIT)
+# 🔴 RUNTIME DATA (session logs, PCAPs, IOCs — contains attacker IPs + data)
 data/
 logs/
 captures/
 sessions/
 iocs/
+pcaps/
 
 # Packet captures & logs
 *.log
+*.log.*
 *.pcap
 *.pcapng
 
-# Python
+# Python bytecode & cache
 __pycache__/
 **/__pycache__/
 *.pyc
 *.py[cod]
 *$py.class
 
-# Virtual environments
+# Virtual environments (never commit these!)
 venv/
-env/
 .venv/
+env/
 
 # Build / distribution
 build/
@@ -43,16 +47,17 @@ htmlcov/
 .tox/
 .nox/
 
-# IDE / editors
+# IDE / editor files (personal preferences)
 .vscode/
 .idea/
 *.swp
 *.swo
 *~
 
-# OS junk
+# OS junk (only matters on your local machine)
 .DS_Store
 Thumbs.db
+Desktop.ini
 
 # Docker
 .dockerignore
@@ -61,3 +66,16 @@ Thumbs.db
 *.tmp
 *.bak
 *.backup
+
+# Database files (local development only)
+*.db
+*.sqlite
+
+# SSH keys / certificates
+*.pem
+*.key
+*.cert
+*.crt
+
+# Supabase sync state (generated at runtime on EC2)
+/tmp/honeypot_sync_state.json

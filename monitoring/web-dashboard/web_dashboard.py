@@ -2,6 +2,9 @@
 """
 Web Dashboard for Honeypot Platform
 Provides a web interface to view logs, sessions, IOCs, and statistics.
+
+Production: Run with gunicorn -w 4 -b 0.0.0.0:5000 --timeout 120 web_dashboard:app
+Dev: python web_dashboard.py
 """
 
 import os
@@ -11,6 +14,8 @@ from datetime import datetime, timedelta
 from pathlib import Path
 from flask import Flask, render_template, jsonify, request, session, redirect, url_for, flash
 import secrets
+from collections import defaultdict
+import threading
 
 from data_store import get_store, LOGS_DIR, SESSIONS_DIR, IOCS_DIR, PCAPS_DIR, use_supabase
 
@@ -728,11 +733,89 @@ def get_country_name(country_code):
     return country_names.get(country_code.upper(), country_code)
 
 
+# ---------- Health Check ----------
+@app.route('/health')
+@app.route('/ready')
+def health():
+    """Health check endpoint for Docker/orchestration."""
+    dirs_ok = all([
+        SESSIONS_DIR.exists() if not use_supabase() else True,
+        IOCS_DIR.exists() if not use_supabase() else True,
+    ])
+    return jsonify({
+        'status': 'healthy' if dirs_ok else 'degraded',
+        'timestamp': datetime.utcnow().isoformat(),
+        'backend': 'supabase' if use_supabase() else 'filesystem',
+        'directories': {
+            'sessions': str(SESSIONS_DIR.exists()),
+            'iocs': str(IOCS_DIR.exists()),
+            'logs': str(LOGS_DIR.exists()),
+        }
+    }), 200 if dirs_ok else 503
+
+
+# ---------- Login Rate Limiting ----------
+_login_attempts = defaultdict(list)
+_login_lock = threading.Lock()
+_LOGIN_MAX_ATTEMPTS = 5
+_LOGIN_WINDOW_SECONDS = 60
+
+def _is_login_rate_limited(ip: str) -> bool:
+    """Check if IP has exceeded login attempt threshold."""
+    with _login_lock:
+        now = datetime.now()
+        cutoff = now - timedelta(seconds=_LOGIN_WINDOW_SECONDS)
+        _login_attempts[ip] = [t for t in _login_attempts[ip] if t > cutoff]
+        if len(_login_attempts[ip]) >= _LOGIN_MAX_ATTEMPTS:
+            return True
+        _login_attempts[ip].append(now)
+        # Limit total tracked IPs
+        if len(_login_attempts) > 10000:
+            oldest_ip = min(_login_attempts.keys(), key=lambda k: _login_attempts[k][-1] if _login_attempts[k] else datetime.min)
+            del _login_attempts[oldest_ip]
+        return False
+
+
+# ---------- Modified Login Route ----------
+# Override the existing login function to add rate limiting
+
+@app.route('/login', methods=['GET', 'POST'])
+def login_with_rate_limit():
+    """Login page with rate limiting."""
+    if request.method == 'POST':
+        if _is_login_rate_limited(request.remote_addr):
+            flash('Too many login attempts. Please wait before trying again.', 'error')
+            logger.warning(f"Rate-limited login from {request.remote_addr}")
+            return render_template('login_new.html')
+        
+        username = request.form.get('username', '')
+        password = request.form.get('password', '')
+        
+        if verify_password(username, password):
+            session['logged_in'] = True
+            session['username'] = username
+            logger.info(f"User {username} logged in from {request.remote_addr}")
+            return redirect(url_for('index'))
+        else:
+            flash('Invalid username or password', 'error')
+            logger.warning(f"Failed login attempt from {request.remote_addr}")
+    
+    if session.get('logged_in'):
+        return redirect(url_for('index'))
+    
+    return render_template('login_new.html')
+
+
 def main():
-    """Main entry point (local Docker / dev). On Vercel, the platform imports `app`."""
+    """Main entry point (local Docker / dev). On Vercel, the platform imports `app`.
+    
+    Production: Use gunicorn instead:
+        gunicorn -w 4 -b 0.0.0.0:5000 --timeout 120 web_dashboard:app
+    """
     port = int(os.getenv('DASHBOARD_PORT', 5000))
     host = os.getenv('DASHBOARD_HOST', '0.0.0.0')
     logger.info(f"Starting Web Dashboard on {host}:{port} (backend={inject_public_config()['data_backend']})")
+    logger.info("PRODUCTION WARNING: Use gunicorn instead of app.run() for production deployment.")
     app.run(host=host, port=port, debug=False)
 
 

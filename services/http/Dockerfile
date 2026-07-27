@@ -14,7 +14,8 @@ RUN mkdir -p /var/log/honeypot /sessions
 
 EXPOSE 8080
 
-CMD ["python", "http_honeypot.py"]
+# Production: Use gunicorn; fallback to flask dev server if unavailable
+CMD ["gunicorn", "-w", "2", "-b", "0.0.0.0:8080", "--timeout", "30", "http_honeypot:app"]
 
 
 

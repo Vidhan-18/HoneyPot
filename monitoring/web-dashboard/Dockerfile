@@ -17,6 +17,7 @@ RUN mkdir -p /logs /sessions /iocs /pcaps
 
 EXPOSE 5000
 
-CMD ["python", "web_dashboard.py"]
+# Production: Use gunicorn; fallback to flask dev server if unavailable
+CMD ["gunicorn", "-w", "4", "-b", "0.0.0.0:5000", "--timeout", "120", "web_dashboard:app"]
 
 

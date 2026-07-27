@@ -1,13 +1,14 @@
 #!/usr/bin/env python3
 """
 Authentication module for web dashboard
+Uses bcrypt for password hashing (includes built-in salting).
 """
 
-import hashlib
 import logging
 import os
 from functools import wraps
 
+import bcrypt
 from flask import flash, redirect, request, session, url_for
 
 logger = logging.getLogger(__name__)
@@ -23,6 +24,11 @@ def is_production() -> bool:
     )
 
 
+def hash_password(password: str) -> str:
+    """Hash password with bcrypt (includes salt automatically)."""
+    return bcrypt.hashpw(password.encode("utf-8"), bcrypt.gensalt()).decode("utf-8")
+
+
 def _resolve_password_hash() -> str:
     """Prefer DASHBOARD_PASSWORD_HASH, else hash ADMIN_PASSWORD at startup."""
     if DEFAULT_PASSWORD_HASH:
@@ -36,14 +42,17 @@ def _resolve_password_hash() -> str:
             "Login is disabled until configured."
         )
         return ""
-    # Local Docker only — dev default (change via .env)
-    logger.warning("Using dev default password; set ADMIN_PASSWORD for production.")
-    return hash_password("honeypot2024")
+    # Dev mode — require explicit DEV_PASSWORD (no hard-coded fallback)
+    dev_pw = os.getenv("DEV_PASSWORD", "")
+    if dev_pw:
+        logger.warning("Using DEV_PASSWORD from .env; set ADMIN_PASSWORD for production.")
+        return hash_password(dev_pw)
+    logger.error(
+        "No password configured! Set ADMIN_PASSWORD (production) or DEV_PASSWORD (dev) in .env"
+    )
+    return ""
 
 
-
-def hash_password(password: str) -> str:
-    return hashlib.sha256(password.encode()).hexdigest()
 
 RESOLVED_PASSWORD_HASH = _resolve_password_hash()
 
@@ -53,7 +62,7 @@ def verify_password(username: str, password: str) -> bool:
         return False
     if username != DEFAULT_USERNAME:
         return False
-    return hash_password(password) == RESOLVED_PASSWORD_HASH
+    return bcrypt.checkpw(password.encode("utf-8"), RESOLVED_PASSWORD_HASH.encode("utf-8"))
 
 
 def login_required(f):

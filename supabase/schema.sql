@@ -45,6 +45,8 @@ create table if not exists public.honeypot_logs (
 
 create index if not exists idx_honeypot_logs_created_at
   on public.honeypot_logs (created_at desc);
+create index if not exists idx_honeypot_logs_source
+  on public.honeypot_logs (source);
 
 -- PCAP metadata (files stay on AWS EC2; store references only)
 create table if not exists public.honeypot_pcaps (

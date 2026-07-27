@@ -7,12 +7,47 @@ from __future__ import annotations
 import json
 import logging
 import os
+import time
 from abc import ABC, abstractmethod
 from datetime import datetime, timedelta
+from functools import wraps
 from pathlib import Path
 from typing import Any, Dict, List, Optional
 
 logger = logging.getLogger(__name__)
+
+# ---------- Simple in-memory cache with TTL ----------
+_cache: Dict[str, Any] = {}
+_cache_ttl: Dict[str, float] = {}
+
+def invalidate_cache():
+    """Clear all cached data. Call after writing new session/IOC data."""
+    _cache.clear()
+    _cache_ttl.clear()
+
+def cached(ttl_seconds: float = 15.0):
+    """Decorator: cache function result for `ttl_seconds`.
+    Skips `self` in args to avoid object-reference-based keys.
+    """
+    def decorator(func):
+        @wraps(func)
+        def wrapper(*args, **kwargs):
+            # Skip 'self' (args[0]) to get a stable cache key
+            key = (func.__name__, str(args[1:]), str(sorted(kwargs.items())))
+            now = time.time()
+            if key in _cache and now - _cache_ttl.get(key, 0) < ttl_seconds:
+                return _cache[key]
+            result = func(*args, **kwargs)
+            _cache[key] = result
+            _cache_ttl[key] = now
+            # Limit cache size — evict oldest if > 500 entries
+            if len(_cache) > 500:
+                oldest = sorted(_cache_ttl.keys(), key=lambda k: _cache_ttl[k])[0]
+                _cache.pop(oldest, None)
+                _cache_ttl.pop(oldest, None)
+            return result
+        return wrapper
+    return decorator
 
 LOGS_DIR = Path(os.getenv("LOGS_DIR", "/logs"))
 SESSIONS_DIR = Path(os.getenv("SESSIONS_DIR", "/sessions"))
@@ -87,6 +122,7 @@ class DataStore(ABC):
 
 
 class FilesystemStore(DataStore):
+    @cached(ttl_seconds=10)
     def list_sessions(self, limit: int = 50) -> List[dict]:
         sessions = []
         if not SESSIONS_DIR.exists():
@@ -116,6 +152,7 @@ class FilesystemStore(DataStore):
             session["file"] = session_file.name
         return session
 
+    @cached(ttl_seconds=15)
     def list_iocs(self, limit: int = 50) -> List[dict]:
         iocs = []
         if not IOCS_DIR.exists():
@@ -196,6 +233,7 @@ class FilesystemStore(DataStore):
         files.sort(key=lambda x: x["modified"], reverse=True)
         return files[:limit]
 
+    @cached(ttl_seconds=15)
     def get_statistics(self) -> dict:
         stats = {
             "total_sessions": 0,
@@ -321,6 +359,7 @@ class SupabaseStore(DataStore):
             session["attack_summary"] = row["attack_summary"]
         return session
 
+    @cached(ttl_seconds=10)
     def list_sessions(self, limit: int = 50) -> List[dict]:
         res = (
             self.client.table("honeypot_sessions")
@@ -353,6 +392,8 @@ class SupabaseStore(DataStore):
             return None
         return self._row_to_session(rows[0])
 
+    @cached(ttl_seconds=15)
+    @cached(ttl_seconds=15)
     def list_iocs(self, limit: int = 50) -> List[dict]:
         res = (
             self.client.table("honeypot_iocs")
@@ -419,6 +460,7 @@ class SupabaseStore(DataStore):
             for r in (res.data or [])
         ]
 
+    @cached(ttl_seconds=15)
     def get_statistics(self) -> dict:
         stats = {
             "total_sessions": 0,

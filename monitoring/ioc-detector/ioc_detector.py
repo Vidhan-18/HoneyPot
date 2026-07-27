@@ -105,13 +105,24 @@ class IOCDetector:
         self.recent_alerts = {}
         self.last_cleanup = time.time()
         
+    MAX_RECENT_ALERTS = 5000
+
     def _cleanup_old_alerts(self):
-        """Remove entries older than 5 minutes to prevent unbounded memory growth"""
+        """Remove entries older than 5 minutes and enforce max size to prevent OOM."""
         now = time.time()
         if now - self.last_cleanup > 60:
+            # Remove stale entries older than 5 minutes
             stale_keys = [k for k, v in self.recent_alerts.items() if (now - v['last_alert']) > 300]
             for k in stale_keys:
                 del self.recent_alerts[k]
+            
+            # Enforce max size — evict oldest entries if over limit
+            if len(self.recent_alerts) > self.MAX_RECENT_ALERTS:
+                excess = sorted(self.recent_alerts.keys(),
+                                key=lambda k: self.recent_alerts[k]['first_seen'])[:-self.MAX_RECENT_ALERTS]
+                for k in excess:
+                    del self.recent_alerts[k]
+            
             self.last_cleanup = now
 
     def detect(self, log_entry):
